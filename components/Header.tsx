@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Menu, X, ShieldCheck, LogOut, Award, ChevronLeft, ChevronRight, Home, LayoutDashboard, Bell } from 'lucide-react';
+import { Menu, X, ShieldCheck, LogOut, Award, ChevronLeft, ChevronRight, Home, LayoutDashboard, Bell, Globe } from 'lucide-react';
 import { User, AppView } from '../App';
 
 interface HeaderProps {
@@ -36,6 +36,7 @@ const Header: React.FC<HeaderProps> = ({ user, currentView, unreadNotifications 
   const dashboardLinks: { name: string; view: AppView; icon: any }[] = [
     { name: 'Home', view: 'home', icon: <Home size={18} /> },
     { name: 'My Hub', view: 'dashboard', icon: <LayoutDashboard size={18} /> },
+    { name: 'View Issues', view: 'public_reports', icon: <Globe size={18} /> },
   ];
 
   const handleNavClick = (view: AppView) => {
