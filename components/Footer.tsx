@@ -75,13 +75,15 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         </div>
 
         <div className="pt-10 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-slate-500 text-xs font-medium">
-            © {new Date().getFullYear()} SaafRasta. Empowering citizens across India.
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-slate-500 text-xs font-medium">
+              © {new Date().getFullYear()} SaafRasta. Empowering citizens across India.
+            </p>
+          </div>
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-1.5 text-slate-500 text-xs font-medium">
               <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-              Official Civic Database: Connected
+              Official Civic Hub: Active
             </span>
           </div>
         </div>

@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { AlertTriangle, Send, ShieldAlert, CheckCircle2, Loader2, Mail, Info, Flame, ShieldWarning } from 'lucide-react';
+/* Removed non-existent ShieldWarning and unused Flame from lucide-react to fix compilation error */
+import { AlertTriangle, Send, ShieldAlert, CheckCircle2, Loader2, Mail, Info } from 'lucide-react';
 
 interface ReportAbuseProps {
   onOpenCrisis?: () => void;

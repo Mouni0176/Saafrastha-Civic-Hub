@@ -1,11 +1,7 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Camera, MapPin, Send, Loader2, Sparkles, CheckCircle2, Navigation, RefreshCw, ShieldAlert, FileText, CheckSquare, Zap, ShieldCheck } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { User, Report } from '../App';
-
-// Initializing the Gemini API client with the API key from environment variables.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 interface ReportModalProps {
   user: User | null;
@@ -27,7 +23,6 @@ const ReportModal: React.FC<ReportModalProps> = ({ user, onReportSubmit, onClose
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Detect user's current location and reverse geocode it to a readable address.
   const detectLocation = () => {
     if (!("geolocation" in navigator)) {
       alert("Geolocation is not supported by your browser.");
@@ -60,9 +55,9 @@ const ReportModal: React.FC<ReportModalProps> = ({ user, onReportSubmit, onClose
       },
       (error) => {
         console.error("Geolocation failed:", error);
-        // Display the error message instead of the object
-        const errorMessage = error.message || "An unknown location error occurred.";
-        alert(`Geolocation failed: ${errorMessage}. Please check browser permissions and try again.`);
+        // Fix: Access error.message instead of alerting the error object
+        const msg = error.message || "Unknown location error";
+        alert(`Geolocation failed: ${msg}. Please check browser permissions and try again.`);
         setIsFetchingLocation(false);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -85,11 +80,11 @@ const ReportModal: React.FC<ReportModalProps> = ({ user, onReportSubmit, onClose
     }
   };
 
-  // Uses Gemini AI to analyze the issue description and provide metadata like category and severity.
   const analyzeIssue = async () => {
     if (!description) return;
     setIsAnalyzing(true);
     try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `Analyze this civic issue description: "${description}". Categorize it, determine severity (Low, Medium, High, Critical), and suggest which department should handle it. Also provide a short catchy 3-word title.`,
@@ -154,7 +149,6 @@ const ReportModal: React.FC<ReportModalProps> = ({ user, onReportSubmit, onClose
       <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={onClose} />
       
       <div className="relative bg-white w-full max-w-xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300 border border-white/20 flex flex-col max-h-[85vh]">
-        {/* Compact Integrated Header */}
         <div className="bg-slate-900 px-8 py-6 relative flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -171,7 +165,6 @@ const ReportModal: React.FC<ReportModalProps> = ({ user, onReportSubmit, onClose
             </button>
           </div>
 
-          {/* Stepper Inside Header */}
           <div className="flex items-center justify-between pt-3 border-t border-white/5">
             {[
               { n: 1, label: 'Evidence', icon: <Camera size={14} /> },
@@ -192,7 +185,6 @@ const ReportModal: React.FC<ReportModalProps> = ({ user, onReportSubmit, onClose
           </div>
         </div>
 
-        {/* Floating Scrollable Content Area */}
         <div className="p-8 relative overflow-y-auto custom-scrollbar flex-grow bg-white">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-slate-50 font-black text-[10rem] -z-10 select-none opacity-60 pointer-events-none">
             SAAF

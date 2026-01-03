@@ -20,6 +20,8 @@ import HelpCenter from './components/HelpCenter';
 import ReportAbuse from './components/ReportAbuse';
 import NotificationsView from './components/NotificationsView';
 import { dbService } from './services/database';
+import { supabase } from './services/supabase';
+import { Globe, Activity, Loader2, ShieldAlert, X, Copy, Check, Database, Sparkles, LogIn, Command, ShieldCheck } from 'lucide-react';
 
 export type UserRole = 'citizen' | 'authority';
 export type AppView = 'home' | 'about' | 'features' | 'process' | 'public_reports' | 'dashboard' | 'feature_detail' | 'help_center' | 'report_abuse' | 'notifications';
@@ -65,129 +67,193 @@ export interface Notification {
   relatedReportId?: string;
 }
 
-const STORAGE_KEYS = {
-  USER: 'saaf_active_user',
-};
+const SQL_SETUP_CODE = `-- SAAFRASTA DATABASE SCHEMA FIX
+DROP TABLE IF EXISTS reports CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
 
-const AboutView: React.FC<{onOpenReport: () => void}> = ({onOpenReport}) => (
-  <div className="animate-in fade-in duration-500">
-    <About />
-    <Challenges />
-    <Impact />
-    <WhyUs />
-    <CTA onOpenReport={onOpenReport} />
-  </div>
+CREATE TABLE profiles (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  full_name TEXT,
+  role TEXT DEFAULT 'citizen',
+  department TEXT,
+  points INTEGER DEFAULT 0,
+  password TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE reports (
+  id TEXT PRIMARY KEY,
+  reporter_id TEXT REFERENCES profiles(id) ON DELETE SET NULL,
+  reporter_name TEXT,
+  title TEXT,
+  description TEXT,
+  location TEXT,
+  category TEXT,
+  severity TEXT,
+  status TEXT DEFAULT 'New',
+  progress INTEGER DEFAULT 0,
+  image_url TEXT,
+  lat DOUBLE PRECISION,
+  lng DOUBLE PRECISION,
+  support_count INTEGER DEFAULT 0,
+  dispute_count INTEGER DEFAULT 0,
+  supported_by TEXT[] DEFAULT '{}',
+  disputed_by TEXT[] DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Enable All Access" ON profiles FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable All Access" ON reports FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO profiles (id, email, full_name, role, points, password)
+VALUES ('u-citizen-1', 'rahul@example.com', 'Rahul Sharma', 'citizen', 450, '123456')
+ON CONFLICT (email) DO NOTHING;`;
+
+const WelcomeOverlay: React.FC<{ user: User; onClose: () => void }> = ({ user, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 6000); // Extended slightly to allow reading the mission
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-2xl animate-in fade-in duration-700">
+      <div className="bg-white p-12 md:p-20 rounded-[4rem] shadow-2xl max-w-3xl w-full text-center space-y-10 animate-in zoom-in slide-in-from-bottom-12 duration-1000 border border-white/20">
+        <div className="relative inline-block">
+          <div className="w-28 h-28 bg-emerald-600 text-white rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl shadow-emerald-600/30">
+            <ShieldCheck size={56} className="animate-pulse" />
+          </div>
+          <div className="absolute -top-4 -right-4 w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center border-4 border-white animate-bounce shadow-lg">
+            <Sparkles size={24} />
+          </div>
+        </div>
+        
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <p className="text-emerald-600 font-black uppercase tracking-[0.3em] text-xs">Identity Verified: {user.name}</p>
+            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight leading-none">
+              Welcome to Civic <br/><span className="text-emerald-600">Issue Reporting</span>
+            </h2>
+          </div>
+          
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-3">
+              <span className="w-2 h-2 rounded-full bg-slate-200"></span>
+              <p className="text-xl md:text-2xl font-black text-slate-800 tracking-widest uppercase opacity-90">
+                Identify. Report. Resolve.
+              </p>
+              <span className="w-2 h-2 rounded-full bg-slate-200"></span>
+            </div>
+            <div className="h-1 w-24 bg-emerald-100 rounded-full"></div>
+          </div>
+
+          <p className="text-slate-500 font-bold text-lg max-w-lg mx-auto leading-relaxed">
+            Join hands with citizens and authorities to improve public services.
+          </p>
+        </div>
+
+        <div className="pt-10 border-t border-slate-100 grid grid-cols-3 gap-6">
+          <div className="text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Sector</p>
+            <p className="text-sm font-black text-slate-800">Operational</p>
+          </div>
+          <div className="text-center border-x border-slate-100">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Session</p>
+            <p className="text-sm font-black text-emerald-600">Secure</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Priority</p>
+            <p className="text-sm font-black text-indigo-600">High</p>
+          </div>
+        </div>
+        
+        <button 
+          onClick={onClose}
+          className="w-full py-6 bg-slate-900 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all hover:bg-black"
+        >
+          Initialize Command Hub
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [showRepairModal, setShowRepairModal] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [currentView, setCurrentView] = useState<AppView>('home');
   const [history, setHistory] = useState<AppView[]>([]);
-  const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
   const [isDbReady, setIsDbReady] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [dbError, setDbError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        await dbService.init();
-        const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
-        if (savedUser) {
-          const parsed = JSON.parse(savedUser);
-          setUser(parsed);
-          setCurrentView('dashboard');
-        }
+  const initApp = async () => {
+    setIsInitializing(true);
+    setDbError(null);
+    try {
+      const isHealthy = await dbService.init();
+      const sessionUser = await dbService.getSession();
+      
+      if (sessionUser) {
+        setUser(sessionUser);
+        setCurrentView('dashboard');
+      }
 
-        const allReports = await dbService.getAllReports();
-        if (allReports.length > 0) {
-          setReports(allReports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-        } else {
-          const initialReports: Report[] = [
-            { id: 'SR-1001', reporterId: 'system', reporterName: 'Sarah Civic', title: 'Large Pothole', description: 'Deep pothole causing traffic issues near the main intersection.', location: 'Main Street, Sector 4', category: 'Roads', severity: 'High', status: 'In Progress', progress: 45, date: '25/10/2023', imageUrl: 'https://images.unsplash.com/photo-1515162816999-a0c47dc192f7?auto=format&fit=crop&q=80&w=800', supportCount: 12, disputeCount: 1, supportedBy: [], disputedBy: [], lat: 28.6139, lng: 77.2090 },
-            { id: 'SR-1002', reporterId: 'system', reporterName: 'John Doe', title: 'Streetlight Out', description: 'Dark alleyway near school, unsafe for kids walking home.', location: 'Baker Lane, North Wing', category: 'Electrical', severity: 'Medium', status: 'New', progress: 0, date: '26/10/2023', imageUrl: 'https://images.unsplash.com/photo-1557333610-90ee4a951ecf?auto=format&fit=crop&q=80&w=800', supportCount: 8, disputeCount: 0, supportedBy: [], disputedBy: [], lat: 28.6200, lng: 77.2200 },
-            { id: 'SR-1003', reporterId: 'system', reporterName: 'Amit Shah', title: 'Illegal Garbage Dumping', description: 'Waste accumulated near the park entrance, attracting pests.', location: 'Green Valley Park', category: 'Sanitation', severity: 'High', status: 'Resolved', progress: 100, date: '24/10/2023', imageUrl: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&q=80&w=1200', supportCount: 45, disputeCount: 2, supportedBy: [], disputedBy: [], lat: 28.6300, lng: 77.2400 }
-          ];
-          for (const r of initialReports) {
-            await dbService.saveReport(r);
-          }
-          setReports(initialReports);
-        }
-      } catch (err) {
-        console.error("Database initialization failed:", err);
-      } finally {
+      if (!isHealthy) {
+        setDbError("Database synchronization required.");
+        setIsDbReady(false);
+      } else {
+        const initialReports = await dbService.getAllReports();
+        setReports(initialReports);
         setIsDbReady(true);
       }
-    };
-    init();
+    } catch (err: any) {
+      setDbError("Network connectivity error.");
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+
+  useEffect(() => {
+    initApp();
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setNotifications([]);
-      return;
-    }
+    if (!supabase || !isDbReady) return;
+    const channel = supabase
+      .channel('public:reports')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, async () => {
+        try {
+          const freshReports = await dbService.getAllReports();
+          setReports(freshReports);
+        } catch (e) {}
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isDbReady]);
 
-    const mockNotifications: Notification[] = [];
-    if (user.role === 'citizen') {
-      const myReports = reports.filter(r => r.reporterId === user.id);
-      if (myReports.length > 0) {
-        mockNotifications.push({
-          id: 'n1',
-          title: 'Status Update',
-          message: `Work has started on your report: ${myReports[0].title}`,
-          timestamp: '2 hours ago',
-          type: 'status_change',
-          isRead: false,
-          relatedReportId: myReports[0].id
-        });
-      }
-      mockNotifications.push({
-        id: 'n2',
-        title: 'Achievement Unlocked',
-        message: 'You earned 50 points for your first verified report!',
-        timestamp: '1 day ago',
-        type: 'points',
-        isRead: true
-      });
-    } else {
-      const criticals = reports.filter(r => r.severity === 'Critical');
-      if (criticals.length > 0) {
-        mockNotifications.push({
-          id: 'n3',
-          title: 'Emergency Dispatch',
-          message: `New Critical incident logged: ${criticals[0].title}. Immediate action required.`,
-          timestamp: '15 minutes ago',
-          type: 'priority',
-          isRead: false,
-          relatedReportId: criticals[0].id
-        });
-      }
-      mockNotifications.push({
-        id: 'n4',
-        title: 'System Synchronized',
-        message: 'Terminal sector 4 gateway is now active and syncing telemetry.',
-        timestamp: '5 hours ago',
-        type: 'system',
-        isRead: true
-      });
-    }
-    setNotifications(mockNotifications);
-  }, [user, reports]);
+  const handleCopySQL = () => {
+    navigator.clipboard.writeText(SQL_SETUP_CODE);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const dynamicUser = useMemo(() => {
     if (!user) return null;
     const userReports = reports.filter(r => r.reporterId === user.id);
     const resolvedCount = userReports.filter(r => r.status === 'Resolved').length;
-    const reportPoints = userReports.length * 50;
-    const resolutionPoints = resolvedCount * 100;
-
     return {
       ...user,
       reportsCount: userReports.length,
-      points: reportPoints + resolutionPoints
+      points: (user.points || 0) + (userReports.length * 50) + (resolvedCount * 100)
     };
   }, [user, reports]);
 
@@ -205,7 +271,6 @@ const App: React.FC = () => {
       const prevView = prevHistory.pop()!;
       setHistory(prevHistory);
       setCurrentView(prevView);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       handleNavigate(user ? 'dashboard' : 'home');
     }
@@ -213,17 +278,17 @@ const App: React.FC = () => {
 
   const handleLogin = (userData: User) => {
     setUser(userData);
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
+    dbService.setSession(userData);
     setIsAuthModalOpen(false);
+    setShowWelcome(true);
     setCurrentView('dashboard');
-    setHistory([]);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setUser(null);
-    localStorage.removeItem(STORAGE_KEYS.USER);
+    dbService.setSession(null);
     setCurrentView('home');
-    setHistory([]);
+    setShowWelcome(false);
   };
 
   const addReport = async (reportData: Partial<Report>) => {
@@ -248,121 +313,129 @@ const App: React.FC = () => {
       lat: reportData.lat,
       lng: reportData.lng
     };
-    await dbService.saveReport(newReport);
-    setReports(prev => [newReport, ...prev]);
+    
+    try {
+      await dbService.saveReport(newReport);
+      const fresh = await dbService.getAllReports();
+      setReports(fresh);
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    }
   };
 
   const handleVote = async (reportId: string, type: 'support' | 'dispute') => {
     if (!user) return setIsAuthModalOpen(true);
-    const reportIndex = reports.findIndex(r => r.id === reportId);
-    if (reportIndex === -1) return;
-    const report = { ...reports[reportIndex] };
-    if (!report.supportedBy) report.supportedBy = [];
-    if (!report.disputedBy) report.disputedBy = [];
-    if (report.supportedBy.includes(user.id) || report.disputedBy.includes(user.id)) return;
+    const report = reports.find(r => r.id === reportId);
+    if (!report || report.supportedBy.includes(user.id) || report.disputedBy.includes(user.id)) return;
+    
+    const updated = { ...report };
     if (type === 'support') {
-      report.supportedBy.push(user.id);
-      report.supportCount = report.supportedBy.length;
+      updated.supportedBy = [...updated.supportedBy, user.id];
+      updated.supportCount++;
     } else {
-      report.disputedBy.push(user.id);
-      report.disputeCount = report.disputedBy.length;
+      updated.disputedBy = [...updated.disputedBy, user.id];
+      updated.disputeCount++;
     }
-    const updated = [...reports];
-    updated[reportIndex] = report;
-    setReports(updated);
-    await dbService.updateReport(report);
-  };
-
-  const updateReportProgress = async (reportId: string, progress: number) => {
-    const r = reports.find(x => x.id === reportId);
-    if (!r) return;
-    const newStatus = progress === 100 ? 'Resolved' : (progress > 0 ? 'In Progress' : 'New');
-    const updated = { ...r, progress, status: newStatus as any };
-    await dbService.updateReport(updated);
-    setReports(prev => prev.map(x => x.id === reportId ? updated : x));
-  };
-
-  const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-  };
-
-  const clearNotifications = () => {
-    setNotifications([]);
+    
+    try {
+      setReports(prev => prev.map(r => r.id === reportId ? updated : r));
+      await dbService.updateReport(updated);
+    } catch (err) {}
   };
 
   const renderContent = () => {
-    if (!isDbReady) return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+    if (isInitializing && !user) return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+        <Loader2 size={40} className="text-emerald-500 animate-spin" />
+        <p className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Waking up database...</p>
       </div>
     );
 
+    // Common views for all users
+    switch (currentView) {
+      case 'about': return <About />;
+      case 'features': return <Features onNavigate={handleNavigate} onSelectFeature={(id) => { setSelectedFeatureId(id); handleNavigate('feature_detail'); }} />;
+      case 'process': return <HowItWorks />;
+      case 'public_reports': return <PublicReports user={dynamicUser} reports={reports} onVote={handleVote} />;
+      case 'feature_detail': return selectedFeatureId !== null ? <FeatureDetail featureId={selectedFeatureId} onBack={handleBack} onGetStarted={() => handleNavigate('home')} /> : <Features onNavigate={handleNavigate} />;
+      case 'help_center': return <HelpCenter />;
+      case 'report_abuse': return <ReportAbuse />;
+      case 'notifications': return <NotificationsView notifications={[]} onMarkRead={() => {}} onClear={() => {}} />;
+    }
+
+    // Auth-only views
     if (user) {
-      switch (currentView) {
-        case 'home':
-          return (
-            <div className="animate-in fade-in duration-700">
-              <Hero user={dynamicUser} onOpenReport={() => setIsReportModalOpen(true)} onOpenAuth={() => {}} onNavigate={handleNavigate} />
-            </div>
-          );
-        case 'public_reports':
-          return <PublicReports user={dynamicUser} reports={reports} onVote={handleVote} />;
-        case 'help_center':
-          return <HelpCenter />;
-        case 'report_abuse':
-          return <ReportAbuse onOpenCrisis={() => setIsReportModalOpen(true)} />;
-        case 'notifications':
-          return <NotificationsView notifications={notifications} onMarkRead={markAsRead} onClear={clearNotifications} />;
-        case 'feature_detail':
-          return <FeatureDetail featureId={selectedFeatureId ?? 0} onBack={handleBack} onGetStarted={() => setIsReportModalOpen(true)} />;
-        case 'dashboard':
-        default:
-          return (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {user.role === 'citizen' ? (
-                <div className="container mx-auto px-4 py-8">
-                  <UserDashboard 
-                    user={dynamicUser!} 
-                    reports={reports.filter(r => r.reporterId === user.id)} 
-                    onOpenReport={() => setIsReportModalOpen(true)}
-                    onNavigate={handleNavigate}
-                  />
-                </div>
-              ) : (
-                <GovDashboard 
-                  user={dynamicUser!} 
-                  allReports={reports} 
-                  onUpdateProgress={updateReportProgress} 
-                  onNavigate={handleNavigate} 
-                />
-              )}
-            </div>
-          );
+      if (currentView === 'dashboard') {
+        return (
+          <div className="container mx-auto px-4 py-8">
+            {user.role === 'citizen' ? (
+              <UserDashboard 
+                user={dynamicUser!} 
+                reports={reports.filter(r => r.reporterId === user.id)} 
+                onOpenReport={() => setIsReportModalOpen(true)}
+                onNavigate={handleNavigate}
+              />
+            ) : (
+              <GovDashboard 
+                user={dynamicUser!} 
+                allReports={reports} 
+                onUpdateProgress={(id, p) => onUpdateProgress(id, p)} 
+              />
+            )}
+          </div>
+        );
       }
     }
 
-    switch (currentView) {
-      case 'public_reports': return <PublicReports user={null} reports={reports} onVote={handleVote} />;
-      case 'about': return <AboutView onOpenReport={() => setIsAuthModalOpen(true)} />;
-      case 'features': return <Features onNavigate={handleNavigate} onSelectFeature={(id) => { setSelectedFeatureId(id); handleNavigate('feature_detail'); }} />;
-      case 'process': return <HowItWorks />;
-      case 'feature_detail': return <FeatureDetail featureId={selectedFeatureId ?? 0} onBack={handleBack} onGetStarted={() => setIsAuthModalOpen(true)} />;
-      case 'help_center': return <HelpCenter />;
-      case 'report_abuse': return <ReportAbuse onOpenCrisis={() => setIsAuthModalOpen(true)} />;
-      case 'home':
-      default:
-        return (
-          <div className="animate-in fade-in duration-700">
-            <Hero user={null} onOpenReport={() => setIsAuthModalOpen(true)} onOpenAuth={() => setIsAuthModalOpen(true)} onNavigate={handleNavigate} />
-          </div>
-        );
-    }
+    // Fallback to Home/Hero
+    return (
+      <>
+        <Hero 
+          user={dynamicUser} 
+          onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} 
+          onOpenAuth={() => setIsAuthModalOpen(true)} 
+          onNavigate={handleNavigate} 
+        />
+        <About />
+        <Features onNavigate={handleNavigate} onSelectFeature={(id) => { setSelectedFeatureId(id); handleNavigate('feature_detail'); }} />
+        <Impact />
+        <HowItWorks />
+        <CTA onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} />
+      </>
+    );
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const onUpdateProgress = async (id: string, progress: number) => {
+    const r = reports.find(x => x.id === id);
+    if (!r) return;
+    const updated = { ...r, progress, status: (progress === 100 ? 'Resolved' : 'In Progress') as any };
+    try {
+      setReports(prev => prev.map(x => x.id === id ? updated : x));
+      await dbService.updateReport(updated);
+    } catch (err) {}
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
+      {dbError ? (
+        <div className="bg-red-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest sticky top-0 z-[150] flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 shadow-xl">
+           <div className="flex items-center gap-2">
+             <ShieldAlert size={14} /> 
+             <span>{dbError}</span>
+           </div>
+           <button 
+             onClick={() => setShowRepairModal(true)} 
+             className="bg-white text-red-600 px-4 py-1.5 rounded-lg font-bold text-[9px] hover:bg-slate-100 transition-all shadow-inner"
+           >
+             Initialize Database Fix
+           </button>
+        </div>
+      ) : isDbReady ? (
+        <div className="bg-emerald-600 text-white text-center py-1 px-4 text-[9px] font-black uppercase tracking-[0.2em] sticky top-0 z-[150] flex items-center justify-center gap-2">
+           <Globe size={10} className="animate-pulse" /> Live Civic Hub Connected
+        </div>
+      ) : null}
+      
       <Header 
         user={dynamicUser} 
         currentView={currentView}
@@ -371,13 +444,53 @@ const App: React.FC = () => {
         onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} 
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
-        unreadNotifications={unreadCount}
       />
-      <main className="flex-grow pt-16">
+      
+      <main className={`flex-grow ${isDbReady || dbError ? 'pt-24' : 'pt-16'}`}>
         {renderContent()}
       </main>
+
       <Footer onNavigate={handleNavigate} />
       
+      {showWelcome && user && (
+        <WelcomeOverlay user={user} onClose={() => setShowWelcome(false)} />
+      )}
+
+      {showRepairModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md" onClick={() => setShowRepairModal(false)} />
+          <div className="relative bg-white w-full max-w-xl rounded-[2.5rem] p-10 flex flex-col gap-8 shadow-2xl animate-in zoom-in duration-300">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
+                 <Database size={24} />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">System Fix Console</h3>
+            </div>
+            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-3">
+               <p className="text-xs font-bold text-slate-600">Please run this in your Supabase SQL Editor to sync the schema:</p>
+               <ol className="text-[10px] text-slate-400 space-y-1 list-decimal list-inside">
+                 <li>Copy the code below</li>
+                 <li>Paste in Supabase SQL Editor</li>
+                 <li>Click Run and reload this page</li>
+               </ol>
+            </div>
+            <button 
+              onClick={handleCopySQL} 
+              className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-black transition-all"
+            >
+              {copied ? <Check size={18} /> : <Copy size={18} />} 
+              {copied ? 'Code Copied!' : 'Copy Fix Script'}
+            </button>
+            <button 
+              onClick={() => { setShowRepairModal(false); window.location.reload(); }} 
+              className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl"
+            >
+              I've Run the Code, Reload App
+            </button>
+          </div>
+        </div>
+      )}
+
       {isReportModalOpen && (
         <ReportModal user={dynamicUser} onReportSubmit={addReport} onClose={() => setIsReportModalOpen(false)} />
       )}
