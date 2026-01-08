@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ArrowRight, Info, MapPin, Camera, CheckCircle, ShieldCheck, Globe, Zap, Activity, Cpu } from 'lucide-react';
+import { ArrowRight, Activity } from 'lucide-react';
 import { User, AppView } from '../App';
 
 interface HeroProps {
@@ -13,7 +12,6 @@ interface HeroProps {
 const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate }) => {
   return (
     <section className="relative pt-32 pb-40 overflow-hidden bg-slate-50 mesh-bg">
-      {/* Background Sophistication */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/5 blur-[120px] rounded-full"></div>
@@ -21,7 +19,6 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="flex flex-col lg:flex-row items-center gap-20">
-          
           <div className="flex-1 space-y-12">
             <div className="space-y-8">
               <h1 className="text-6xl lg:text-8xl font-black text-slate-900 leading-[0.95] tracking-tight">
@@ -72,7 +69,6 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
               )}
             </div>
 
-            {/* Platform Stats Row */}
             <div className="flex items-center gap-12 pt-12 border-t border-slate-200">
                {[
                  { label: "Resolved", value: "94%", color: "text-emerald-500" },
@@ -87,7 +83,6 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
             </div>
           </div>
 
-          {/* Professional Imagery with Layers */}
           <div className="flex-1 w-full relative">
              <div className="absolute -inset-10 bg-emerald-500/10 rounded-full blur-[100px] animate-pulse"></div>
              <div className="relative group">
@@ -97,11 +92,12 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
                     src="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&q=80&w=1400" 
                     alt="Sustainable City Infrastructure" 
                     className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-1000"
+                    loading="eager"
+                    decoding="async"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
                </div>
                
-               {/* Overlay Dashboard Card */}
                <div className="absolute bottom-10 -left-10 bg-white/80 backdrop-blur-xl p-8 rounded-[3rem] shadow-2xl border border-white/50 max-w-[280px] animate-in slide-in-from-left-8 duration-1000 delay-500">
                   <div className="flex items-center gap-4 mb-4">
                      <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
@@ -118,7 +114,6 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
                </div>
              </div>
           </div>
-
         </div>
       </div>
     </section>

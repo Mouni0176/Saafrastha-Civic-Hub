@@ -2,7 +2,6 @@
   "name": "SaafRasta Civic Hub",
   "description": "A modern civic-tech platform for reporting and resolving urban issues in real-time, empowering citizens and municipalities.",
   "requestFramePermissions": [
-    "camera",
-    "geolocation"
+    "camera"
   ]
 }
