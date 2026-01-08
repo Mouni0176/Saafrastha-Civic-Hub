@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Mail, Lock, Loader2, User as UserIcon, AlertCircle, ShieldCheck, ChevronRight } from 'lucide-react';
+import { X, Mail, Lock, Loader2, User as UserIcon, AlertCircle, ShieldCheck, ChevronRight, ChevronLeft, Heart, Users, Eye } from 'lucide-react';
 import { User, UserRole } from '../App';
 import { dbService } from '../services/database';
 import { supabase } from '../services/supabase';
@@ -26,7 +26,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onClose }) => {
 
     try {
       if (isLogin) {
-        // REAL SUPABASE SIGN IN
         const { data, error: authError } = await supabase.auth.signInWithPassword({
           email: email.toLowerCase(),
           password: password,
@@ -39,14 +38,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onClose }) => {
           if (profile) {
             onLogin(profile);
           } else {
-            // Handle edge case where auth exists but profile doesn't
-            await dbService.syncProfile(data.user.id, data.user.email!, name || data.user.email!.split('@')[0], role);
+            const fullName = name || data.user.email!.split('@')[0];
+            await dbService.syncProfile(data.user.id, data.user.email!, fullName, role);
             const newProfile = await dbService.getUserProfile(data.user.id);
             if (newProfile) onLogin(newProfile);
           }
         }
       } else {
-        // REAL SUPABASE SIGN UP
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.toLowerCase(),
           password: password,
@@ -55,7 +53,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onClose }) => {
         if (signUpError) throw signUpError;
 
         if (data.user) {
-          // Create the associated profile record
           await dbService.syncProfile(data.user.id, email, name, role);
           const profile = await dbService.getUserProfile(data.user.id);
           if (profile) onLogin(profile);
@@ -68,147 +65,162 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-xl" onClick={onClose} />
+    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 sm:p-8">
+      {/* Dynamic Background Blur */}
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-2xl" onClick={onClose} />
       
-      <div className="relative bg-white w-full max-w-5xl rounded-[3rem] shadow-[0_40px_100px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col lg:flex-row animate-in zoom-in duration-500 border border-white/20">
-        <div className="lg:w-2/5 bg-slate-900 p-12 text-white relative flex flex-col justify-between overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-             <div className="absolute top-[-20%] right-[-20%] w-[300px] h-[300px] bg-emerald-500 rounded-full blur-[100px]"></div>
-             <div className="absolute bottom-[-10%] left-[-10%] w-[200px] h-[200px] bg-blue-500 rounded-full blur-[80px]"></div>
-          </div>
+      {/* Rectangular Dashboard Card */}
+      <div className="relative bg-white w-full max-w-2xl rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in zoom-in slide-in-from-bottom-8 duration-500 border border-white/20">
+        
+        {/* Navigation Control Bar */}
+        <div className="flex items-center justify-between px-10 py-6 border-b border-slate-50 bg-slate-50/50">
+          <button 
+            onClick={onClose}
+            className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-900 transition-all group"
+          >
+            <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
+               <ChevronLeft size={16} />
+            </div>
+            Back
+          </button>
           
-          <div className="relative z-10">
-             <div className="flex items-center gap-3 mb-10">
-                <div className="bg-emerald-600 p-2.5 rounded-xl shadow-lg shadow-emerald-600/20">
-                   <ShieldCheck size={28} />
-                </div>
-                <span className="text-2xl font-black tracking-tighter">Saaf<span className="text-emerald-500">Rasta</span></span>
-             </div>
-             
-             <div className="space-y-6">
-                <h3 className="text-4xl font-black leading-tight tracking-tight">Real-time Civic <span className="text-emerald-500 italic">Auth</span>.</h3>
-                <p className="text-slate-400 font-medium leading-relaxed">
-                   Securely log in using your Supabase account. Your identity is verified against the Unified Command Gateway.
-                </p>
-             </div>
+          <div className="flex items-center gap-2">
+            <div className="bg-emerald-600 p-1.5 rounded-lg text-white">
+              <ShieldCheck size={16} />
+            </div>
+            <span className="text-lg font-black tracking-tighter text-slate-900">
+              Saaf<span className="text-emerald-600">Rasta</span>
+            </span>
           </div>
 
-          <div className="relative z-10 pt-12">
-             <div className="p-6 bg-white/5 rounded-[2rem] border border-white/10 backdrop-blur-md">
-                <div className="flex items-center gap-3 mb-2">
-                   <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-300">Auth Gateway Status</span>
-                </div>
-                <p className="text-xs font-bold text-slate-400">Encrypted JWT Session Management</p>
-             </div>
-          </div>
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        <div className="lg:w-3/5 p-12 bg-white relative">
-          <button onClick={onClose} className="absolute top-8 right-8 p-3 text-slate-300 hover:text-slate-600 hover:bg-slate-50 rounded-2xl transition-all"><X size={24} /></button>
-          
-          <div className="max-w-md mx-auto">
-            <div className="mb-10 text-center lg:text-left">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">
-                {isLogin 
-                  ? (role === 'authority' ? 'Officer Sign In' : 'Citizen Sign In') 
-                  : 'Join the Vanguard'}
+        <div className="p-10 lg:p-14">
+          <div className="grid md:grid-cols-5 gap-12">
+            
+            {/* Minimal Mission Section (2/5) */}
+            <div className="md:col-span-2 space-y-6">
+              <h2 className="text-3xl font-black text-slate-900 leading-tight tracking-tight">
+                {isLogin ? "Welcome Back." : "Join Us."}
               </h2>
-              <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Verify your credentials with Supabase</p>
-            </div>
-
-            {error && (
-              <div className="p-5 bg-red-50 text-red-600 rounded-[2rem] mb-8 flex items-center gap-4 text-xs font-black uppercase tracking-widest border border-red-100">
-                <AlertCircle size={20} className="shrink-0" /> {error}
-              </div>
-            )}
-
-            <div className="flex p-1.5 bg-slate-50 rounded-[1.8rem] border border-slate-100 mb-8">
-              <button 
-                onClick={() => setRole('citizen')}
-                className={`flex-1 py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${role === 'citizen' ? 'bg-white text-slate-900 shadow-xl border border-slate-100 scale-105 z-10' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                Citizen HUB
-              </button>
-              <button 
-                onClick={() => setRole('authority')}
-                className={`flex-1 py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest transition-all ${role === 'authority' ? 'bg-white text-slate-900 shadow-xl border border-slate-100 scale-105 z-10' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                Official PORTAL
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {!isLogin && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
-                  <div className="relative group">
-                    <input 
-                      type="text" required placeholder="RAHUL SHARMA" 
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-14 text-sm font-black focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase"
-                      value={name} onChange={(e) => setName(e.target.value)}
-                    />
-                    <UserIcon className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors" size={20} />
+              <div className="space-y-4">
+                {[
+                  { icon: <Eye size={14} />, label: "Report" },
+                  { icon: <Heart size={14} />, label: "Track" },
+                  { icon: <Users size={14} />, label: "Resolve" }
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 text-slate-600">
+                    <span className="text-emerald-500">{item.icon}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">{item.label}</span>
                   </div>
+                ))}
+              </div>
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest pt-4 border-t border-slate-50">
+                Transparency in every street.
+              </p>
+            </div>
+
+            {/* Form Section (3/5) */}
+            <div className="md:col-span-3 space-y-8">
+              {error && (
+                <div className="p-4 bg-red-50 text-red-600 rounded-2xl flex items-center gap-3 text-[10px] font-black uppercase tracking-widest border border-red-100 animate-shake">
+                  <AlertCircle size={18} className="shrink-0" /> {error}
                 </div>
               )}
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+              {/* Role Tabs */}
+              <div className="flex p-1.5 bg-slate-50 rounded-2xl border border-slate-100">
+                <button 
+                  onClick={() => setRole('citizen')}
+                  className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${role === 'citizen' ? 'bg-white text-slate-900 shadow-xl border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  Citizen
+                </button>
+                <button 
+                  onClick={() => setRole('authority')}
+                  className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${role === 'authority' ? 'bg-white text-slate-900 shadow-xl border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  Officer
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {!isLogin && (
+                  <div className="relative group">
+                    <input 
+                      type="text" required placeholder="FULL NAME" 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 px-12 text-sm font-black focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase"
+                      value={name} onChange={(e) => setName(e.target.value)}
+                    />
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors" size={18} />
+                  </div>
+                )}
+
                 <div className="relative group">
                   <input 
-                    type="email" required placeholder="rahul@example.com" 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-14 text-sm font-black focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
+                    type="email" required placeholder="EMAIL" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 px-12 text-sm font-black focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
                     value={email} onChange={(e) => setEmail(e.target.value)}
                   />
-                  <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors" size={20} />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors" size={18} />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between items-center ml-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password</label>
-                </div>
                 <div className="relative group">
                   <input 
-                    type="password" required placeholder="Min 6 characters" 
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-14 text-sm font-black focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
+                    type="password" required placeholder="PASSWORD" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3.5 px-12 text-sm font-black focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all"
                     value={password} onChange={(e) => setPassword(e.target.value)}
                   />
-                  <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors" size={20} />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors" size={18} />
                 </div>
+
+                <button 
+                  type="submit" disabled={isLoading}
+                  className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-[0.98] ${
+                    role === 'authority' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-900 hover:bg-black'
+                  } text-white shadow-slate-200`}
+                >
+                  {isLoading ? <Loader2 className="animate-spin" size={20} /> : (
+                    <>
+                      {isLogin ? 'Enter' : 'Register'}
+                      <ChevronRight size={18} />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <div className="text-center">
+                <button 
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setError(null);
+                  }}
+                  className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em] hover:text-emerald-600 transition-colors underline underline-offset-8"
+                >
+                  {isLogin ? "Need an account?" : "Already member?"}
+                </button>
               </div>
-
-              <button 
-                type="submit" disabled={isLoading}
-                className={`w-full py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95 ${
-                  role === 'authority' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'
-                } text-white shadow-emerald-500/20`}
-              >
-                {isLoading ? <Loader2 className="animate-spin" size={20} /> : (
-                  <>
-                    {isLogin ? (role === 'authority' ? 'Official Login' : 'Citizen Login') : 'Create Identity'}
-                    <ChevronRight size={18} />
-                  </>
-                )}
-              </button>
-            </form>
-
-            <div className="mt-10 text-center">
-              <button 
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError(null);
-                }}
-                className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition-colors"
-              >
-                {isLogin ? "No account? Sign Up" : "Already have an account? Sign In"}
-              </button>
             </div>
           </div>
         </div>
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-6px); }
+          75% { transform: translateX(6px); }
+        }
+        .animate-shake {
+          animation: shake 0.2s ease-in-out 0s 2;
+        }
+      `}} />
     </div>
   );
 };

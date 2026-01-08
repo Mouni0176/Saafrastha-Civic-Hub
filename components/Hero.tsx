@@ -66,27 +66,27 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex flex-col lg:flex-row items-center gap-12">
           <div className="flex-1 text-center lg:text-left space-y-10">
-            {/* Impact Statement Ribbon */}
+            {/* Minimal Impact Statement */}
             <div className="inline-flex items-center gap-3 p-1 pr-4 rounded-full bg-white border border-slate-200 shadow-xl shadow-slate-200/20 group cursor-default">
               <div className="bg-emerald-600 text-white p-2 rounded-full shadow-lg group-hover:rotate-12 transition-transform">
                 <Globe size={16} />
               </div>
-              <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Global Civic Innovation Hub</span>
+              <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">Civic Innovation Hub</span>
             </div>
             
             <div className="space-y-6">
               <h1 className="text-5xl md:text-7xl font-black text-slate-900 leading-[1.05] tracking-tight">
                 {user ? (
-                  <>Ready to Keep <br /><span className="text-emerald-600">Your Street</span> Safe?</>
+                  <>Impact <br /><span className="text-emerald-600">Your Hub.</span></>
                 ) : (
-                  <>Building the <br /><span className="text-emerald-600">Cleanest Cities</span> in India.</>
+                  <>Better Cities. <br /><span className="text-emerald-600">Pure Action.</span></>
                 )}
               </h1>
 
               <p className="text-xl text-slate-500 max-w-2xl mx-auto lg:mx-0 font-medium leading-relaxed">
                 {user 
-                  ? `Success, ${user.name.split(' ')[0]}. Your contributions have earned you ${user.points} points. Keep reporting to maintain your "Civic Vanguard" ranking.`
-                  : 'SaafRasta is the premium digital infrastructure for urban transparency. We connect citizens directly to municipal field units for lightning-fast resolutions.'
+                  ? `Active session: ${user.name.split(' ')[0]}. Status: Vanguard.`
+                  : 'Report. Track. Resolve. The direct link from citizen to officer.'
                 }
               </p>
             </div>
@@ -97,7 +97,7 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
                   onClick={onOpenReport}
                   className="group w-full sm:w-auto bg-slate-900 hover:bg-black text-white px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-2xl active:scale-95"
                 >
-                  Report Incident
+                  New Report
                   <ArrowRight className="group-hover:translate-x-1 transition-transform" size={18} />
                 </button>
               ) : (
@@ -106,14 +106,14 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
                     onClick={onOpenAuth}
                     className="group w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all shadow-2xl active:scale-95"
                   >
-                    Get Started
+                    Join Hub
                     <ArrowRight className="group-hover:translate-x-1 transition-transform" size={18} />
                   </button>
                   <button 
                     onClick={() => onNavigate('features')}
                     className="w-full sm:w-auto bg-white border border-slate-200 text-slate-900 px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] transition-all hover:bg-slate-50 active:scale-95 shadow-lg"
                   >
-                    View Network Features
+                    Explore
                   </button>
                 </>
               )}
@@ -121,9 +121,9 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
             
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-8 pt-6 border-t border-slate-100">
               {[
-                { icon: <Camera size={18} />, text: 'Visual Proof' },
-                { icon: <MapPin size={18} />, text: 'Precision GPS' },
-                { icon: <CheckCircle size={18} />, text: 'Verified Fix' },
+                { icon: <Camera size={18} />, text: 'Visual' },
+                { icon: <MapPin size={18} />, text: 'GPS' },
+                { icon: <CheckCircle size={18} />, text: 'Verified' },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
                   <span className="text-emerald-500">{item.icon}</span>
@@ -145,45 +145,10 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
                   onLoad={(e) => (e.currentTarget.style.opacity = '1')}
                   style={{ opacity: 0 }}
                 />
-                
-                {/* Overlay Status Bar */}
-                <div className="absolute bottom-6 left-6 right-6 p-5 glass-morphism rounded-3xl flex items-center justify-between border border-white/40">
-                  <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                        <CheckCircle size={20} />
-                     </div>
-                     <div>
-                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Sector 4 Resolve</p>
-                        <p className="text-sm font-bold text-slate-900">100% Corrective Action</p>
-                     </div>
-                  </div>
-                </div>
-             </div>
-
-             {/* Floating UI Elements */}
-             <div className="absolute -top-10 -right-10 glass-morphism p-6 rounded-[2rem] shadow-2xl z-20 hidden lg:block border border-white/50 animate-bounce-slow">
-                <div className="flex items-center gap-4">
-                  <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-xl shadow-indigo-600/30">
-                    <Activity size={24} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Live Telemetry</p>
-                    <p className="text-lg font-black text-slate-800">Operational</p>
-                  </div>
-                </div>
              </div>
           </div>
         </div>
       </div>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes bounce-slow {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        .animate-bounce-slow {
-          animation: bounce-slow 4s ease-in-out infinite;
-        }
-      `}} />
     </section>
   );
 };

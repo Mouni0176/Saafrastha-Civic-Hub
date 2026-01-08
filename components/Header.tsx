@@ -12,6 +12,7 @@ interface HeaderProps {
   onOpenAuth: () => void;
   onLogout: () => void;
   isAuthOpen?: boolean;
+  unreadCount?: number;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -22,7 +23,8 @@ const Header: React.FC<HeaderProps> = ({
   onOpenReport, 
   onOpenAuth, 
   onLogout,
-  isAuthOpen = false
+  isAuthOpen = false,
+  unreadCount = 0
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -46,8 +48,8 @@ const Header: React.FC<HeaderProps> = ({
     setIsMobileMenuOpen(false);
   };
 
-  // Back button should appear on every page except home
-  const showBackButton = currentView !== 'home';
+  // User specifically requested no back buttons in the dashboard
+  const showBackButton = currentView !== 'home' && currentView !== 'dashboard';
   const showLandingNav = !user && !isAuthOpen;
 
   return (
@@ -87,10 +89,14 @@ const Header: React.FC<HeaderProps> = ({
               {user && (
                 <button 
                   onClick={() => onNavigate('notifications')}
-                  className="p-2 text-slate-400 relative"
+                  className="p-2 text-slate-400 relative hover:text-slate-900 transition-colors"
                 >
                   <Bell size={20} />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-600 text-[8px] font-black text-white rounded-full border border-white flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
                 </button>
               )}
               {user ? (
@@ -168,10 +174,27 @@ const Header: React.FC<HeaderProps> = ({
             </nav>
           )}
 
-          {/* User Profile & Logout */}
+          {/* User Profile & Actions (Desktop) */}
           <div className="hidden lg:flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-4 bg-white/50 p-1.5 rounded-2xl border border-white/50 animate-in slide-in-from-right-4 duration-500">
+                
+                {/* Notification Bell (Desktop) */}
+                <button 
+                  onClick={() => onNavigate('notifications')}
+                  className={`p-2.5 rounded-xl transition-all relative group ${
+                    currentView === 'notifications' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                  aria-label="Notifications"
+                >
+                  <Bell size={20} className={currentView === 'notifications' ? '' : 'group-hover:rotate-12 transition-transform'} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-[10px] font-black text-white rounded-full border-2 border-white flex items-center justify-center shadow-lg">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
                 <div className="flex flex-col items-end px-2">
                    <p className="text-[10px] font-black text-slate-900 leading-none uppercase tracking-tight">{user.name.split(' ')[0]}</p>
                    <p className="text-[8px] font-black text-emerald-600 uppercase tracking-widest mt-1">{user.points} Pts</p>

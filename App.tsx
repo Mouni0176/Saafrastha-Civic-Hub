@@ -116,6 +116,15 @@ const App: React.FC = () => {
   const [dbError, setDbError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
+  
+  // Mock notifications for demonstration
+  const [notifications, setNotifications] = useState<Notification[]>([
+    { id: '1', title: 'Points Earned!', message: 'You earned 50 points for validating a neighborhood report.', timestamp: '2h ago', type: 'points', isRead: false },
+    { id: '2', title: 'Status Update', message: 'Report #SR-1290 has been moved to "In Progress".', timestamp: '5h ago', type: 'status_change', isRead: false },
+    { id: '3', title: 'Critical Alert', message: 'New high-priority hazard reported in Sector 4.', timestamp: '1d ago', type: 'priority', isRead: true },
+  ]);
+
+  const unreadCount = useMemo(() => notifications.filter(n => !n.isRead).length, [notifications]);
 
   useEffect(() => {
     const handleSyncProfile = async (session: any) => {
@@ -299,6 +308,14 @@ const App: React.FC = () => {
     await dbService.updateReport(updated);
   };
 
+  const markNotificationRead = (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+  };
+
   if (isInitializing && !user) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6">
       <RefreshCw size={48} className="text-emerald-500 animate-spin mb-6" />
@@ -323,6 +340,7 @@ const App: React.FC = () => {
         onOpenAuth={() => setIsAuthModalOpen(true)} 
         onLogout={handleLogout}
         isAuthOpen={isAuthModalOpen}
+        unreadCount={unreadCount}
       />
       <main className="flex-grow pt-24">
         <Suspense fallback={<ViewLoading />}>
@@ -335,11 +353,18 @@ const App: React.FC = () => {
               case 'feature_detail': return selectedFeatureId !== null ? <FeatureDetail featureId={selectedFeatureId} onBack={handleBack} onGetStarted={() => handleNavigate('home')} /> : <Features onNavigate={handleNavigate} />;
               case 'help_center': return <HelpCenter />;
               case 'report_abuse': return <ReportAbuse />;
-              case 'notifications': return <NotificationsView notifications={[]} onMarkRead={() => {}} onClear={() => {}} />;
+              case 'notifications': return <NotificationsView notifications={notifications} onMarkRead={markNotificationRead} onClear={clearNotifications} />;
               case 'dashboard': return user ? (
                 <div className="container mx-auto px-4 py-8">
                   {user.role === 'citizen' ? (
-                    <UserDashboard user={dynamicUser!} reports={reports.filter(r => r.reporterId === user.id)} onOpenReport={() => setIsReportModalOpen(true)} onNavigate={handleNavigate} />
+                    <UserDashboard 
+                      user={dynamicUser!} 
+                      userReports={reports.filter(r => r.reporterId === user.id)} 
+                      publicReports={reports}
+                      onVote={handleVote}
+                      onOpenReport={() => setIsReportModalOpen(true)} 
+                      onNavigate={handleNavigate} 
+                    />
                   ) : (
                     <GovDashboard user={dynamicUser!} allReports={reports} onUpdateReport={onUpdateReport} onNavigate={handleNavigate} />
                   )}
