@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, ChevronLeft, Bell, Home, Info, Sparkles, Workflow, Rss, User as UserIcon, Menu, X } from 'lucide-react';
+import { ShieldCheck, LogOut, ChevronLeft, Bell, Home, Sparkles, Workflow, Rss, User as UserIcon, Menu, X } from 'lucide-react';
 import { User, AppView } from '../App';
 
 interface HeaderProps {
@@ -37,7 +36,6 @@ const Header: React.FC<HeaderProps> = ({
 
   const navLinks: { id: AppView; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: 'Home', icon: <Home size={16} /> },
-    { id: 'about', label: 'About', icon: <Info size={16} /> },
     { id: 'features', label: 'Features', icon: <Sparkles size={16} /> },
     { id: 'process', label: 'Process', icon: <Workflow size={16} /> },
     { id: 'public_reports', label: 'Public Feed', icon: <Rss size={16} /> },
