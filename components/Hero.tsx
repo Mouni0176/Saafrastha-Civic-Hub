@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { ArrowRight, MapPin, Camera, CheckCircle, ShieldCheck, Globe, Zap, Activity, Cpu } from 'lucide-react';
+import { ArrowRight, Info, MapPin, Camera, CheckCircle, ShieldCheck, Globe, Zap, Activity, Cpu } from 'lucide-react';
 import { User, AppView } from '../App';
 
 interface HeroProps {
@@ -12,7 +13,7 @@ interface HeroProps {
 const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate }) => {
   return (
     <section className="relative pt-32 pb-40 overflow-hidden bg-slate-50 mesh-bg">
-      {/* Background Sophistication - Grid removed for a cleaner look */}
+      {/* Background Sophistication */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/5 blur-[120px] rounded-full"></div>
@@ -22,8 +23,6 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
         <div className="flex flex-col lg:flex-row items-center gap-20">
           
           <div className="flex-1 space-y-12">
-            {/* Status Pill Removed as requested */}
-
             <div className="space-y-8">
               <h1 className="text-6xl lg:text-8xl font-black text-slate-900 leading-[0.95] tracking-tight">
                 {user ? (
@@ -39,13 +38,21 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
 
             <div className="flex flex-col sm:flex-row gap-5">
               {user ? (
-                <button 
-                  onClick={onOpenReport}
-                  className="group bg-slate-900 hover:bg-black text-white px-10 py-5 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all shadow-2xl shadow-slate-900/20 active:scale-95"
-                >
-                  Initialize Report
-                  <ArrowRight className="group-hover:translate-x-1.5 transition-transform" size={20} />
-                </button>
+                <>
+                  <button 
+                    onClick={onOpenReport}
+                    className="group bg-slate-900 hover:bg-black text-white px-10 py-5 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.2em] flex items-center justify-center gap-4 transition-all shadow-2xl shadow-slate-900/20 active:scale-95"
+                  >
+                    Initialize Report
+                    <ArrowRight className="group-hover:translate-x-1.5 transition-transform" size={20} />
+                  </button>
+                  <button 
+                    onClick={() => onNavigate('dashboard')}
+                    className="px-10 py-5 bg-white border border-slate-200 text-slate-900 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-50 transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3"
+                  >
+                    View My Hub
+                  </button>
+                </>
               ) : (
                 <>
                   <button 
@@ -57,7 +64,7 @@ const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate 
                   </button>
                   <button 
                     onClick={() => onNavigate('public_reports')}
-                    className="px-10 py-6 bg-white border border-slate-200 text-slate-900 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-50 transition-all shadow-xl active:scale-95"
+                    className="px-10 py-6 bg-slate-100 text-slate-900 rounded-[2rem] font-black text-[11px] uppercase tracking-[0.2em] hover:bg-slate-200 transition-all shadow-lg active:scale-95"
                   >
                     View Network
                   </button>

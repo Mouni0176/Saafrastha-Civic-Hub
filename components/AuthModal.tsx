@@ -65,12 +65,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 sm:p-8">
-      {/* Dynamic Background Blur */}
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-2xl" onClick={onClose} />
+    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 sm:p-8 bg-slate-50 mesh-bg">
+      {/* Mesh Background Decorations */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/5 blur-[120px] rounded-full"></div>
+      </div>
       
       {/* Rectangular Dashboard Card */}
-      <div className="relative bg-white w-full max-w-2xl rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col animate-in zoom-in slide-in-from-bottom-8 duration-500 border border-white/20">
+      <div className="relative bg-white w-full max-w-2xl rounded-[3rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] overflow-hidden flex flex-col animate-in zoom-in slide-in-from-bottom-8 duration-500 border border-slate-200">
         
         {/* Navigation Control Bar */}
         <div className="flex items-center justify-between px-10 py-6 border-b border-slate-50 bg-slate-50/50">
@@ -81,7 +84,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onLogin, onClose }) => {
             <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:bg-slate-900 group-hover:text-white transition-all">
                <ChevronLeft size={16} />
             </div>
-            Back
+            Back to Hub
           </button>
           
           <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, ChevronLeft, Bell, Home, Sparkles, Workflow, Rss, User as UserIcon, Menu, X } from 'lucide-react';
+import { ShieldCheck, LogOut, ChevronLeft, Bell, Home, Sparkles, Workflow, Rss, User as UserIcon, Menu, X, Info } from 'lucide-react';
 import { User, AppView } from '../App';
 
 interface HeaderProps {
@@ -36,13 +37,15 @@ const Header: React.FC<HeaderProps> = ({
 
   const navLinks: { id: AppView; label: string; icon: React.ReactNode }[] = [
     { id: 'home', label: 'Home', icon: <Home size={16} /> },
+    { id: 'about', label: 'About', icon: <Info size={16} /> },
     { id: 'features', label: 'Features', icon: <Sparkles size={16} /> },
     { id: 'process', label: 'Process', icon: <Workflow size={16} /> },
     { id: 'public_reports', label: 'Public Feed', icon: <Rss size={16} /> },
   ];
 
   const showBackButton = currentView !== 'home' && currentView !== 'dashboard';
-  const showLandingNav = !user && !isAuthOpen;
+  // Always show nav for landing pages, and show for auth users in mobile or as secondary
+  const showLandingNav = !isAuthOpen; 
 
   const handleMobileNav = (view: AppView) => {
     onNavigate(view);
@@ -148,6 +151,14 @@ const Header: React.FC<HeaderProps> = ({
                     className="p-2.5 md:p-3 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-2xl transition-all border border-transparent hover:border-red-100"
                   >
                     <LogOut size={18} className="md:w-5 md:h-5" />
+                  </button>
+
+                  {/* Mobile Menu Toggle for Auth Users */}
+                  <button 
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="lg:hidden p-2.5 bg-white border border-slate-200 text-slate-600 rounded-2xl active:scale-95"
+                  >
+                    {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                   </button>
                 </div>
               ) : (

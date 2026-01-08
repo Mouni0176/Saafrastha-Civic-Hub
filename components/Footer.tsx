@@ -42,7 +42,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <h4 className="font-bold text-slate-900 mb-6 text-sm uppercase tracking-widest">Navigation</h4>
             <ul className="space-y-4 text-slate-500 text-sm">
               <li><button onClick={() => handleNav('home')} className="hover:text-emerald-600 transition-colors font-medium">Home</button></li>
-              <li><button onClick={() => handleNav('about')} className="hover:text-emerald-600 transition-colors font-medium">About Us</button></li>
+              <li><button onClick={() => handleNav('about')} className="hover:text-emerald-600 transition-colors font-medium">About</button></li>
               <li><button onClick={() => handleNav('features')} className="hover:text-emerald-600 transition-colors font-medium">Features</button></li>
               <li><button onClick={() => handleNav('process')} className="hover:text-emerald-600 transition-colors font-medium">How It Works</button></li>
             </ul>
