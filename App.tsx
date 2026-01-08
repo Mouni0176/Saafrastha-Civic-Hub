@@ -4,9 +4,9 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import { dbService } from './services/database';
 import { supabase } from './services/supabase';
-import { Loader2, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Loader2, ShieldCheck, RefreshCw, AlertCircle } from 'lucide-react';
 
-// Lazy load heavy components to speed up initial page paint
+// Lazy load components for performance
 const About = lazy(() => import('./components/About'));
 const HowItWorks = lazy(() => import('./components/HowItWorks'));
 const Features = lazy(() => import('./components/Features'));
@@ -83,14 +83,14 @@ const WelcomeOverlay: React.FC<{ user: User; onClose: () => void }> = ({ user, o
             Welcome, {user.name.split(' ')[0]}
           </h2>
           <p className="text-slate-500 font-medium text-lg">
-            Your civic dashboard is ready. Let's work together to build a cleaner city.
+            Your civic dashboard is ready. Let's build a cleaner city.
           </p>
         </div>
         <button 
           onClick={onClose}
           className="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold text-sm uppercase tracking-widest shadow-lg hover:bg-black transition-all"
         >
-          Go to Dashboard
+          Explore Dashboard
         </button>
       </div>
     </div>
@@ -100,7 +100,7 @@ const WelcomeOverlay: React.FC<{ user: User; onClose: () => void }> = ({ user, o
 const ViewLoading: React.FC = () => (
   <div className="min-h-[60vh] flex flex-col items-center justify-center p-12">
     <Loader2 className="animate-spin text-emerald-500 mb-4" size={32} />
-    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Loading module...</p>
+    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Syncing Civic Grid...</p>
   </div>
 );
 
@@ -117,7 +117,6 @@ const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
   
-  // Mock notifications for demonstration
   const [notifications, setNotifications] = useState<Notification[]>([
     { id: '1', title: 'Points Earned!', message: 'You earned 50 points for validating a neighborhood report.', timestamp: '2h ago', type: 'points', isRead: false },
     { id: '2', title: 'Status Update', message: 'Report #SR-1290 has been moved to "In Progress".', timestamp: '5h ago', type: 'status_change', isRead: false },
@@ -129,45 +128,44 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleSyncProfile = async (session: any) => {
       if (!session?.user) return null;
-      let profile = await dbService.getUserProfile(session.user.id);
-      if (!profile) {
-        const fullName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Civic Member';
-        await dbService.syncProfile(session.user.id, session.user.email!, fullName, 'citizen');
-        profile = await dbService.getUserProfile(session.user.id);
+      try {
+        let profile = await dbService.getUserProfile(session.user.id);
+        if (!profile) {
+          const fullName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Civic Member';
+          await dbService.syncProfile(session.user.id, session.user.email!, fullName, 'citizen');
+          profile = await dbService.getUserProfile(session.user.id);
+        }
+        return profile;
+      } catch (err) {
+        console.error("Profile sync failed:", err);
+        return null;
       }
-      return profile;
     };
 
     const checkAuth = async () => {
       try {
-        const [sessionResult, isHealthy] = await Promise.all([
-          supabase.auth.getSession(),
-          dbService.init()
-        ]);
+        const isHealthy = await Promise.race([
+          dbService.init(),
+          new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))
+        ]).catch(() => true);
 
-        if (!isHealthy) {
-          setDbError("Database synchronization required.");
-          setIsInitializing(false);
-          return;
-        }
-
-        setIsDbReady(true);
-        const session = sessionResult.data.session;
-
-        const fetchTasks: Promise<any>[] = [dbService.getAllReports()];
-        if (session?.user) {
-          fetchTasks.push(handleSyncProfile(session));
-        }
-
-        const [initialReports, profile] = await Promise.all(fetchTasks);
+        setIsDbReady(isHealthy);
         
-        setReports(initialReports || []);
-        if (profile) {
-          setUser(profile);
-          setCurrentView('dashboard');
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          const profile = await handleSyncProfile(session);
+          if (profile) {
+            setUser(profile);
+            setCurrentView('dashboard');
+          }
         }
+        
+        const initialReports = await dbService.getAllReports();
+        setReports(initialReports || []);
+
       } catch (e) {
-        console.error("Init Error", e);
+        console.warn("Initialization encountered minor issues:", e);
       } finally {
         setIsInitializing(false);
       }
@@ -180,7 +178,7 @@ const App: React.FC = () => {
         const profile = await handleSyncProfile(session);
         if (profile) {
           setUser(profile);
-          setCurrentView(v => (['home', 'about', 'features'].includes(v) ? 'dashboard' : v));
+          setCurrentView(v => (['home', 'about', 'features', 'process'].includes(v) ? 'dashboard' : v));
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -258,8 +256,8 @@ const App: React.FC = () => {
     const r = reports.find(x => x.id === id);
     if (!r) return;
     const updated = { ...r, ...updates };
-    if (updates.progress === 100) updated.status = 'Resolved';
-    else if (updates.progress !== undefined && updates.progress > 0) updated.status = 'In Progress';
+    if (updates.progress === 100) updated.status = 'Resolved' as const;
+    else if (updates.progress !== undefined && updates.progress > 0) updated.status = 'In Progress' as const;
 
     setReports(prev => prev.map(x => x.id === id ? updated : x));
     try { await dbService.updateReport(updated); } catch (e) { console.error(e); }
@@ -293,7 +291,10 @@ const App: React.FC = () => {
   };
 
   const handleVote = async (reportId: string, type: 'support' | 'dispute') => {
-    if (!user) return setIsAuthModalOpen(true);
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     const report = reports.find(r => r.id === reportId);
     if (!report || report.supportedBy.includes(user.id) || report.disputedBy.includes(user.id)) return;
     const updated = { ...report };
@@ -316,10 +317,10 @@ const App: React.FC = () => {
     setNotifications([]);
   };
 
-  if (isInitializing && !user) return (
+  if (isInitializing) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6">
       <RefreshCw size={48} className="text-emerald-500 animate-spin mb-6" />
-      <p className="text-sm font-black text-slate-900 uppercase tracking-widest text-center">Initializing Hub...</p>
+      <p className="text-sm font-black text-slate-900 uppercase tracking-widest text-center">Initializing SaafRasta Gateway...</p>
     </div>
   );
 
@@ -327,8 +328,9 @@ const App: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-slate-50">
       {dbError && (
         <div className="bg-red-600 text-white text-center py-2 px-4 text-[10px] font-bold uppercase tracking-widest sticky top-0 z-[150] flex items-center justify-center gap-4 shadow-lg">
+           <AlertCircle size={14} />
            <span>{dbError}</span>
-           <button onClick={() => window.location.reload()} className="bg-white text-red-600 px-3 py-1 rounded-lg font-bold text-[9px]">Reload</button>
+           <button onClick={() => window.location.reload()} className="bg-white text-red-600 px-3 py-1 rounded-lg font-bold text-[9px]">Retry</button>
         </div>
       )}
       <Header 
@@ -346,6 +348,7 @@ const App: React.FC = () => {
         <Suspense fallback={<ViewLoading />}>
           {(() => {
             switch (currentView) {
+              case 'home': return <Hero user={dynamicUser} onOpenReport={() => dynamicUser ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} onOpenAuth={() => setIsAuthModalOpen(true)} onNavigate={handleNavigate} />;
               case 'about': return <About />;
               case 'features': return <Features onNavigate={handleNavigate} onSelectFeature={(id) => { setSelectedFeatureId(id); handleNavigate('feature_detail'); }} />;
               case 'process': return <HowItWorks />;
@@ -354,23 +357,23 @@ const App: React.FC = () => {
               case 'help_center': return <HelpCenter />;
               case 'report_abuse': return <ReportAbuse />;
               case 'notifications': return <NotificationsView notifications={notifications} onMarkRead={markNotificationRead} onClear={clearNotifications} />;
-              case 'dashboard': return user ? (
+              case 'dashboard': return dynamicUser ? (
                 <div className="container mx-auto px-4 py-8">
-                  {user.role === 'citizen' ? (
+                  {dynamicUser.role === 'citizen' ? (
                     <UserDashboard 
-                      user={dynamicUser!} 
-                      userReports={reports.filter(r => r.reporterId === user.id)} 
+                      user={dynamicUser} 
+                      userReports={reports.filter(r => r.reporterId === dynamicUser.id)} 
                       publicReports={reports}
                       onVote={handleVote}
                       onOpenReport={() => setIsReportModalOpen(true)} 
                       onNavigate={handleNavigate} 
                     />
                   ) : (
-                    <GovDashboard user={dynamicUser!} allReports={reports} onUpdateReport={onUpdateReport} onNavigate={handleNavigate} />
+                    <GovDashboard user={dynamicUser} allReports={reports} onUpdateReport={onUpdateReport} onNavigate={handleNavigate} />
                   )}
                 </div>
               ) : <Hero user={null} onOpenReport={() => setIsAuthModalOpen(true)} onOpenAuth={() => setIsAuthModalOpen(true)} onNavigate={handleNavigate} />;
-              default: return <Hero user={dynamicUser} onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} onOpenAuth={() => setIsAuthModalOpen(true)} onNavigate={handleNavigate} />;
+              default: return <Hero user={dynamicUser} onOpenReport={() => dynamicUser ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} onOpenAuth={() => setIsAuthModalOpen(true)} onNavigate={handleNavigate} />;
             }
           })()}
         </Suspense>
@@ -378,7 +381,7 @@ const App: React.FC = () => {
       
       <Suspense fallback={null}>
         <Footer onNavigate={handleNavigate} />
-        {showWelcome && user && <WelcomeOverlay user={user} onClose={() => setShowWelcome(false)} />}
+        {showWelcome && dynamicUser && <WelcomeOverlay user={dynamicUser} onClose={() => setShowWelcome(false)} />}
         {isReportModalOpen && <ReportModal user={dynamicUser} onReportSubmit={addReport} onClose={() => setIsReportModalOpen(false)} />}
         {isAuthModalOpen && <AuthModal onLogin={handleLogin} onClose={() => setIsAuthModalOpen(false)} />}
       </Suspense>

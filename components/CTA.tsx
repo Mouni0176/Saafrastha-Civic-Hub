@@ -10,12 +10,8 @@ const CTA: React.FC<CTAProps> = ({ onOpenReport }) => {
     <section className="py-24 bg-white">
       <div className="container mx-auto px-4 md:px-6">
         <div className="bg-emerald-600 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-             <div className="grid grid-cols-12 gap-4 h-full">
-                {Array.from({length: 48}).map((_, i) => (
-                  <div key={i} className="border-r border-b border-white"></div>
-                ))}
-             </div>
+          {/* Grid lines removed for cleaner look */}
+          <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-white/20">
           </div>
           
           <div className="relative z-10 space-y-8">
