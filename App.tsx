@@ -21,7 +21,7 @@ import ReportAbuse from './components/ReportAbuse';
 import NotificationsView from './components/NotificationsView';
 import { dbService } from './services/database';
 import { supabase } from './services/supabase';
-import { Globe, Loader2, ShieldAlert, X, Copy, Check, Database, Sparkles, ShieldCheck } from 'lucide-react';
+import { Loader2, ShieldAlert, Sparkles, ShieldCheck } from 'lucide-react';
 
 export type UserRole = 'citizen' | 'authority';
 export type AppView = 'home' | 'about' | 'features' | 'process' | 'public_reports' | 'dashboard' | 'feature_detail' | 'help_center' | 'report_abuse' | 'notifications';
@@ -109,47 +109,29 @@ CREATE POLICY "Enable All Access" ON reports FOR ALL USING (true) WITH CHECK (tr
 
 const WelcomeOverlay: React.FC<{ user: User; onClose: () => void }> = ({ user, onClose }) => {
   useEffect(() => {
-    const timer = setTimeout(onClose, 6000);
+    const timer = setTimeout(onClose, 5000);
     return () => clearTimeout(timer);
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-2xl animate-in fade-in duration-700">
-      <div className="bg-white p-12 md:p-20 rounded-[4rem] shadow-2xl max-w-3xl w-full text-center space-y-10 animate-in zoom-in slide-in-from-bottom-12 duration-1000 border border-white/20">
-        <div className="relative inline-block">
-          <div className="w-28 h-28 bg-emerald-600 text-white rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl shadow-emerald-600/30">
-            <ShieldCheck size={56} className="animate-pulse" />
-          </div>
-          <div className="absolute -top-4 -right-4 w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center border-4 border-white animate-bounce shadow-lg">
-            <Sparkles size={24} />
-          </div>
+    <div className="fixed inset-0 z-[300] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-xl animate-in fade-in duration-500">
+      <div className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl max-w-xl w-full text-center space-y-8 animate-in zoom-in duration-500 border border-slate-100">
+        <div className="w-20 h-20 bg-emerald-600 text-white rounded-3xl flex items-center justify-center mx-auto shadow-xl">
+          <ShieldCheck size={40} />
         </div>
-        <div className="space-y-6">
-          <div className="space-y-2">
-            <p className="text-emerald-600 font-black uppercase tracking-[0.3em] text-xs">Identity Verified: {user.name}</p>
-            <h2 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tight leading-none">
-              Welcome to Civic <br/><span className="text-emerald-600">Issue Reporting</span>
-            </h2>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="flex items-center gap-3">
-              <span className="w-2 h-2 rounded-full bg-slate-200"></span>
-              <p className="text-xl md:text-2xl font-black text-slate-800 tracking-widest uppercase opacity-90">
-                Identify. Report. Resolve.
-              </p>
-              <span className="w-2 h-2 rounded-full bg-slate-200"></span>
-            </div>
-            <div className="h-1 w-24 bg-emerald-100 rounded-full"></div>
-          </div>
-          <p className="text-slate-500 font-bold text-lg max-w-lg mx-auto leading-relaxed">
-            Join hands with citizens and authorities to improve public services.
+        <div className="space-y-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">
+            Welcome, {user.name.split(' ')[0]}
+          </h2>
+          <p className="text-slate-500 font-medium text-lg">
+            Your civic dashboard is ready. Let's work together to build a cleaner city.
           </p>
         </div>
         <button 
           onClick={onClose}
-          className="w-full py-6 bg-slate-900 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all hover:bg-black"
+          className="w-full py-5 bg-slate-900 text-white rounded-2xl font-bold text-sm uppercase tracking-widest shadow-lg hover:bg-black transition-all"
         >
-          Initialize Command Hub
+          Go to Dashboard
         </button>
       </div>
     </div>
@@ -174,20 +156,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleSyncProfile = async (session: any) => {
       if (!session?.user) return null;
-      
       let profile = await dbService.getUserProfile(session.user.id);
-      
-      // If profile doesn't exist (first time social login), create it
       if (!profile) {
         const fullName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Civic Member';
         await dbService.syncProfile(session.user.id, session.user.email!, fullName, 'citizen');
         profile = await dbService.getUserProfile(session.user.id);
       }
-      
       return profile;
     };
 
-    // Initial Auth Check
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -197,7 +174,6 @@ const App: React.FC = () => {
           setCurrentView('dashboard');
         }
       }
-      
       const isHealthy = await dbService.init();
       if (!isHealthy) setDbError("Database synchronization required.");
       else {
@@ -210,7 +186,6 @@ const App: React.FC = () => {
 
     checkAuth();
 
-    // Listen for Auth Changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
         const profile = await handleSyncProfile(session);
@@ -287,16 +262,12 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      // Immediate UI reset for responsiveness
       setUser(null);
       setCurrentView('home');
       setHistory([]);
-      
-      // Call Supabase signout
       await supabase.auth.signOut();
     } catch (error) {
       console.error("Logout error:", error);
-      // Even if API fails, ensure user is cleared from app state
       setUser(null);
       setCurrentView('home');
     }
@@ -324,7 +295,6 @@ const App: React.FC = () => {
       lat: reportData.lat,
       lng: reportData.lng
     };
-    
     await dbService.saveReport(newReport);
     const fresh = await dbService.getAllReports();
     setReports(fresh);
@@ -334,7 +304,6 @@ const App: React.FC = () => {
     if (!user) return setIsAuthModalOpen(true);
     const report = reports.find(r => r.id === reportId);
     if (!report || report.supportedBy.includes(user.id) || report.disputedBy.includes(user.id)) return;
-    
     const updated = { ...report };
     if (type === 'support') {
       updated.supportedBy = [...updated.supportedBy, user.id];
@@ -343,7 +312,6 @@ const App: React.FC = () => {
       updated.disputedBy = [...updated.disputedBy, user.id];
       updated.disputeCount++;
     }
-    
     setReports(prev => prev.map(r => r.id === reportId ? updated : r));
     await dbService.updateReport(updated);
   };
@@ -351,8 +319,8 @@ const App: React.FC = () => {
   const renderContent = () => {
     if (isInitializing && !user) return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white">
-        <Loader2 size={40} className="text-emerald-500 animate-spin" />
-        <p className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Verifying Session...</p>
+        <Loader2 size={32} className="text-emerald-500 animate-spin" />
+        <p className="mt-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Loading Hub...</p>
       </div>
     );
 
@@ -400,26 +368,24 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
       {dbError && (
-        <div className="bg-red-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest sticky top-0 z-[150] flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 shadow-xl">
+        <div className="bg-red-600 text-white text-center py-2 px-4 text-[10px] font-bold uppercase tracking-widest sticky top-0 z-[150] flex items-center justify-center gap-4 shadow-lg">
            <ShieldAlert size={14} /> <span>{dbError}</span>
-           <button onClick={() => setShowRepairModal(true)} className="bg-white text-red-600 px-4 py-1.5 rounded-lg font-bold text-[9px] hover:bg-slate-100 transition-all">Fix Database</button>
+           <button onClick={() => setShowRepairModal(true)} className="bg-white text-red-600 px-3 py-1 rounded-lg font-bold text-[9px] hover:bg-slate-100">Fix Database</button>
         </div>
       )}
-      <Header user={dynamicUser} currentView={currentView} onNavigate={handleNavigate} onBack={handleBack} onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} onOpenAuth={() => setIsAuthModalOpen(true)} onLogout={handleLogout} />
+      <Header 
+        user={dynamicUser} 
+        currentView={currentView} 
+        onNavigate={handleNavigate} 
+        onBack={handleBack} 
+        onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} 
+        onOpenAuth={() => setIsAuthModalOpen(true)} 
+        onLogout={handleLogout}
+        isAuthOpen={isAuthModalOpen}
+      />
       <main className={`flex-grow ${isDbReady || dbError ? 'pt-24' : 'pt-16'}`}>{renderContent()}</main>
       <Footer onNavigate={handleNavigate} />
       {showWelcome && user && <WelcomeOverlay user={user} onClose={() => setShowWelcome(false)} />}
-      {showRepairModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md" onClick={() => setShowRepairModal(false)} />
-          <div className="relative bg-white w-full max-w-xl rounded-[2.5rem] p-10 flex flex-col gap-8 shadow-2xl animate-in zoom-in duration-300">
-            <Database size={24} className="text-red-600" />
-            <h3 className="text-2xl font-black text-slate-900 uppercase">System Fix Console</h3>
-            <button onClick={handleCopySQL} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest">{copied ? 'Code Copied!' : 'Copy Fix Script'}</button>
-            <button onClick={() => window.location.reload()} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest">Reload App</button>
-          </div>
-        </div>
-      )}
       {isReportModalOpen && <ReportModal user={dynamicUser} onReportSubmit={addReport} onClose={() => setIsReportModalOpen(false)} />}
       {isAuthModalOpen && <AuthModal onLogin={handleLogin} onClose={() => setIsAuthModalOpen(false)} />}
     </div>
