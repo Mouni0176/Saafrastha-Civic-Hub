@@ -5,9 +5,10 @@ import { supabase } from './supabase';
 export class CivicDB {
   async init(): Promise<boolean> {
     try {
-      const { error } = await supabase.from('profiles').select('id, email').limit(1);
+      // Very fast existence check
+      const { error } = await supabase.from('profiles').select('id').limit(1);
       if (error) {
-        if (error.code === '42P01' || error.code === '42703' || error.message.includes('email')) {
+        if (error.code === '42P01' || error.code === '42703') {
           return false;
         }
         return true; 
@@ -50,7 +51,6 @@ export class CivicDB {
     }
   }
 
-  // Create or update a profile in the database
   async syncProfile(id: string, email: string, name?: string, role?: string): Promise<void> {
     const { error } = await supabase
       .from('profiles')
@@ -70,7 +70,7 @@ export class CivicDB {
       .from('profiles')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error || !data) return null;
     
@@ -111,7 +111,9 @@ export class CivicDB {
       supportedBy: r.supported_by || [],
       disputedBy: r.disputed_by || [],
       lat: r.lat,
-      lng: r.lng
+      lng: r.lng,
+      // Fallback: assignedUnit is handled in-memory since column is missing in DB
+      assignedUnit: undefined 
     }));
   }
 
@@ -138,6 +140,7 @@ export class CivicDB {
         dispute_count: 0,
         supported_by: [],
         disputed_by: []
+        // Removed assigned_unit as it doesn't exist in the DB schema
       });
 
     if (error) throw new Error(`Report Error: ${error.message}`);
@@ -153,6 +156,7 @@ export class CivicDB {
         dispute_count: updatedReport.disputeCount,
         supported_by: updatedReport.supportedBy,
         disputed_by: updatedReport.disputedBy
+        // Removed assigned_unit to fix 'Could not find column' error
       })
       .eq('id', updatedReport.id);
 

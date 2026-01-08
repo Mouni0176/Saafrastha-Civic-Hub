@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Camera, Eye, TrendingUp, HandHelping, Recycle, LayoutDashboard, Sparkles, ArrowUpRight } from 'lucide-react';
+import { Camera, Eye, TrendingUp, HandHelping, LayoutDashboard, Sparkles, ArrowUpRight } from 'lucide-react';
 import { AppView } from '../App';
 
 interface FeaturesProps {
@@ -37,13 +36,6 @@ const Features: React.FC<FeaturesProps> = ({ onNavigate, onSelectFeature }) => {
       desc: "Connect with local NGOs for community cleanup drives and earn digital badges for your social profile.",
       color: "bg-purple-50 text-purple-600",
       accent: "border-purple-100 hover:shadow-purple-100"
-    },
-    {
-      icon: <Recycle />,
-      title: "Circular Economy Support",
-      desc: "Direct channel for small recycling vendors to collect segregated waste reported by the community.",
-      color: "bg-green-50 text-green-600",
-      accent: "border-green-100 hover:shadow-green-100"
     },
     {
       icon: <LayoutDashboard />,

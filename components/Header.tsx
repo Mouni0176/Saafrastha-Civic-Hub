@@ -46,10 +46,8 @@ const Header: React.FC<HeaderProps> = ({
     setIsMobileMenuOpen(false);
   };
 
-  const isDetailView = ['feature_detail', 'help_center', 'report_abuse', 'notifications'].includes(currentView);
-  const currentNavLabel = navLinks.find(l => l.id === currentView)?.label || 'Menu';
-
-  // Only show landing page navigation if we're not logged in AND not currently in the auth screen
+  // Back button should appear on every page except home
+  const showBackButton = currentView !== 'home';
   const showLandingNav = !user && !isAuthOpen;
 
   return (
@@ -59,19 +57,30 @@ const Header: React.FC<HeaderProps> = ({
       <div className="container mx-auto px-4 md:px-6">
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
           
-          {/* Logo Section */}
+          {/* Logo Section & Back Button */}
           <div className="flex items-center justify-between w-full lg:w-auto">
-            <button 
-              onClick={() => onNavigate('home')} 
-              className="flex items-center gap-2 group active:scale-95 transition-all"
-            >
-              <div className="bg-emerald-600 p-2 rounded-xl text-white shadow-lg shadow-emerald-600/20 group-hover:rotate-6 transition-transform">
-                <ShieldCheck size={24} />
-              </div>
-              <span className="text-xl font-black tracking-tighter text-slate-900">
-                Saaf<span className="text-emerald-600">Rasta</span>
-              </span>
-            </button>
+            <div className="flex items-center gap-3">
+              {showBackButton && (
+                <button 
+                  onClick={onBack}
+                  className="p-2 bg-white/80 backdrop-blur-md hover:bg-slate-100 text-slate-600 rounded-xl transition-all active:scale-95 border border-slate-200 shadow-sm"
+                  aria-label="Go back"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+              )}
+              <button 
+                onClick={() => onNavigate('home')} 
+                className="flex items-center gap-2 group active:scale-95 transition-all"
+              >
+                <div className="bg-emerald-600 p-2 rounded-xl text-white shadow-lg shadow-emerald-600/20 group-hover:rotate-6 transition-transform">
+                  <ShieldCheck size={24} />
+                </div>
+                <span className="text-xl font-black tracking-tighter text-slate-900">
+                  Saaf<span className="text-emerald-600">Rasta</span>
+                </span>
+              </button>
+            </div>
 
             {/* Mobile Actions (Visible only on mobile) */}
             <div className="flex items-center gap-2 lg:hidden">
@@ -96,10 +105,9 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* THE BIG SEGMENTED BUTTON (Central Navigation) */}
+          {/* Central Navigation */}
           {showLandingNav && (
             <nav className="relative w-full lg:w-auto animate-in fade-in duration-500">
-              {/* Desktop View: One Big Button with segments */}
               <div className={`hidden lg:flex items-center p-1.5 bg-white/70 backdrop-blur-md rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/40 group/hub transition-all hover:shadow-2xl hover:border-emerald-100`}>
                 {navLinks.map((link, idx) => (
                   <React.Fragment key={link.id}>
@@ -121,7 +129,6 @@ const Header: React.FC<HeaderProps> = ({
                 ))}
               </div>
 
-              {/* Mobile View: One Big Button that expands */}
               <div className="lg:hidden w-full">
                 <button 
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -132,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({
                       {navLinks.find(l => l.id === currentView)?.icon || <Sparkles size={16} />}
                     </div>
                     <span className="text-xs font-black uppercase tracking-widest text-slate-900">
-                      {currentNavLabel}
+                      {navLinks.find(l => l.id === currentView)?.label || 'Menu'}
                     </span>
                   </div>
                   <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
@@ -161,7 +168,7 @@ const Header: React.FC<HeaderProps> = ({
             </nav>
           )}
 
-          {/* User Profile & Actions (Desktop) */}
+          {/* User Profile & Logout */}
           <div className="hidden lg:flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-4 bg-white/50 p-1.5 rounded-2xl border border-white/50 animate-in slide-in-from-right-4 duration-500">
@@ -173,16 +180,9 @@ const Header: React.FC<HeaderProps> = ({
                 <button 
                   onClick={onLogout}
                   className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                  aria-label="Logout"
                 >
                   <LogOut size={18} />
-                </button>
-
-                <button 
-                  onClick={onOpenReport}
-                  className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-xl active:scale-95 flex items-center gap-2"
-                >
-                  <Plus size={16} />
-                  Dispatch
                 </button>
               </div>
             ) : !isAuthOpen && (

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   ChevronLeft, 
@@ -13,7 +12,6 @@ import {
   Eye, 
   TrendingUp, 
   HandHelping, 
-  Recycle, 
   LayoutDashboard 
 } from 'lucide-react';
 
@@ -79,20 +77,6 @@ const FEATURE_DATA = [
       "Digital certificates and civic impact badges for resumes."
     ],
     color: "purple"
-  },
-  {
-    icon: <Recycle />,
-    title: "Circular Economy Support",
-    desc: "SaafRasta treats waste as a resource. We connect report data on segregated waste directly to small-scale recycling vendors and waste-pickers. This creates an informal but efficient circular economy where plastic, paper, and metal find their way to recycling units faster than traditional landfill routes.",
-    tagline: "Turning urban waste into economic opportunity.",
-    techStack: ["Vendor Matching Algorithm", "Inventory Management", "Eco-Impact Calculator", "SMS Alert Gateway"],
-    benefits: [
-      "Direct income opportunities for waste-processing SMEs.",
-      "Reduction in landfill volume through better segregation.",
-      "Real-time alerts for vendors when recyclables are reported.",
-      "Carbon footprint tracking for municipal areas."
-    ],
-    color: "green"
   },
   {
     icon: <LayoutDashboard />,
@@ -223,8 +207,6 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetS
                <button 
                 key={i} 
                 onClick={() => {
-                  // This relies on the parent's logic to change featureId
-                  // But for simplicity in this specific view, we'll just allow back
                   onBack();
                 }}
                 className={`w-12 h-12 rounded-xl flex items-center justify-center border transition-all ${i === featureId ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-400 hover:border-emerald-600 hover:text-emerald-600'}`}
