@@ -21,7 +21,7 @@ import ReportAbuse from './components/ReportAbuse';
 import NotificationsView from './components/NotificationsView';
 import { dbService } from './services/database';
 import { supabase } from './services/supabase';
-import { Globe, Activity, Loader2, ShieldAlert, X, Copy, Check, Database, Sparkles, LogIn, Command, ShieldCheck } from 'lucide-react';
+import { Globe, Loader2, ShieldAlert, X, Copy, Check, Database, Sparkles, ShieldCheck } from 'lucide-react';
 
 export type UserRole = 'citizen' | 'authority';
 export type AppView = 'home' | 'about' | 'features' | 'process' | 'public_reports' | 'dashboard' | 'feature_detail' | 'help_center' | 'report_abuse' | 'notifications';
@@ -78,13 +78,12 @@ CREATE TABLE profiles (
   role TEXT DEFAULT 'citizen',
   department TEXT,
   points INTEGER DEFAULT 0,
-  password TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE reports (
   id TEXT PRIMARY KEY,
-  reporter_id TEXT REFERENCES profiles(id) ON DELETE SET NULL,
+  reporter_id TEXT,
   reporter_name TEXT,
   title TEXT,
   description TEXT,
@@ -106,15 +105,11 @@ CREATE TABLE reports (
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Enable All Access" ON profiles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Enable All Access" ON reports FOR ALL USING (true) WITH CHECK (true);
-
-INSERT INTO profiles (id, email, full_name, role, points, password)
-VALUES ('u-citizen-1', 'rahul@example.com', 'Rahul Sharma', 'citizen', 450, '123456')
-ON CONFLICT (email) DO NOTHING;`;
+CREATE POLICY "Enable All Access" ON reports FOR ALL USING (true) WITH CHECK (true);`;
 
 const WelcomeOverlay: React.FC<{ user: User; onClose: () => void }> = ({ user, onClose }) => {
   useEffect(() => {
-    const timer = setTimeout(onClose, 6000); // Extended slightly to allow reading the mission
+    const timer = setTimeout(onClose, 6000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -129,7 +124,6 @@ const WelcomeOverlay: React.FC<{ user: User; onClose: () => void }> = ({ user, o
             <Sparkles size={24} />
           </div>
         </div>
-        
         <div className="space-y-6">
           <div className="space-y-2">
             <p className="text-emerald-600 font-black uppercase tracking-[0.3em] text-xs">Identity Verified: {user.name}</p>
@@ -137,7 +131,6 @@ const WelcomeOverlay: React.FC<{ user: User; onClose: () => void }> = ({ user, o
               Welcome to Civic <br/><span className="text-emerald-600">Issue Reporting</span>
             </h2>
           </div>
-          
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center gap-3">
               <span className="w-2 h-2 rounded-full bg-slate-200"></span>
@@ -148,27 +141,10 @@ const WelcomeOverlay: React.FC<{ user: User; onClose: () => void }> = ({ user, o
             </div>
             <div className="h-1 w-24 bg-emerald-100 rounded-full"></div>
           </div>
-
           <p className="text-slate-500 font-bold text-lg max-w-lg mx-auto leading-relaxed">
             Join hands with citizens and authorities to improve public services.
           </p>
         </div>
-
-        <div className="pt-10 border-t border-slate-100 grid grid-cols-3 gap-6">
-          <div className="text-center">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Sector</p>
-            <p className="text-sm font-black text-slate-800">Operational</p>
-          </div>
-          <div className="text-center border-x border-slate-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Session</p>
-            <p className="text-sm font-black text-emerald-600">Secure</p>
-          </div>
-          <div className="text-center">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Priority</p>
-            <p className="text-sm font-black text-indigo-600">High</p>
-          </div>
-        </div>
-        
         <button 
           onClick={onClose}
           className="w-full py-6 bg-slate-900 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl active:scale-95 transition-all hover:bg-black"
@@ -195,35 +171,63 @@ const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
 
-  const initApp = async () => {
-    setIsInitializing(true);
-    setDbError(null);
-    try {
-      const isHealthy = await dbService.init();
-      const sessionUser = await dbService.getSession();
+  useEffect(() => {
+    const handleSyncProfile = async (session: any) => {
+      if (!session?.user) return null;
       
-      if (sessionUser) {
-        setUser(sessionUser);
-        setCurrentView('dashboard');
+      let profile = await dbService.getUserProfile(session.user.id);
+      
+      // If profile doesn't exist (first time social login), create it
+      if (!profile) {
+        const fullName = session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Civic Member';
+        await dbService.syncProfile(session.user.id, session.user.email!, fullName, 'citizen');
+        profile = await dbService.getUserProfile(session.user.id);
       }
+      
+      return profile;
+    };
 
-      if (!isHealthy) {
-        setDbError("Database synchronization required.");
-        setIsDbReady(false);
-      } else {
+    // Initial Auth Check
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const profile = await handleSyncProfile(session);
+        if (profile) {
+          setUser(profile);
+          setCurrentView('dashboard');
+        }
+      }
+      
+      const isHealthy = await dbService.init();
+      if (!isHealthy) setDbError("Database synchronization required.");
+      else {
+        setIsDbReady(true);
         const initialReports = await dbService.getAllReports();
         setReports(initialReports);
-        setIsDbReady(true);
       }
-    } catch (err: any) {
-      setDbError("Network connectivity error.");
-    } finally {
       setIsInitializing(false);
-    }
-  };
+    };
 
-  useEffect(() => {
-    initApp();
+    checkAuth();
+
+    // Listen for Auth Changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        const profile = await handleSyncProfile(session);
+        if (profile) {
+          setUser(profile);
+          if (currentView === 'home' || currentView === 'about' || currentView === 'features') {
+            setCurrentView('dashboard');
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setCurrentView('home');
+        setHistory([]);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -231,10 +235,8 @@ const App: React.FC = () => {
     const channel = supabase
       .channel('public:reports')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, async () => {
-        try {
-          const freshReports = await dbService.getAllReports();
-          setReports(freshReports);
-        } catch (e) {}
+        const freshReports = await dbService.getAllReports();
+        setReports(freshReports);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -278,17 +280,26 @@ const App: React.FC = () => {
 
   const handleLogin = (userData: User) => {
     setUser(userData);
-    dbService.setSession(userData);
     setIsAuthModalOpen(false);
     setShowWelcome(true);
     setCurrentView('dashboard');
   };
 
   const handleLogout = async () => {
-    setUser(null);
-    dbService.setSession(null);
-    setCurrentView('home');
-    setShowWelcome(false);
+    try {
+      // Immediate UI reset for responsiveness
+      setUser(null);
+      setCurrentView('home');
+      setHistory([]);
+      
+      // Call Supabase signout
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if API fails, ensure user is cleared from app state
+      setUser(null);
+      setCurrentView('home');
+    }
   };
 
   const addReport = async (reportData: Partial<Report>) => {
@@ -314,13 +325,9 @@ const App: React.FC = () => {
       lng: reportData.lng
     };
     
-    try {
-      await dbService.saveReport(newReport);
-      const fresh = await dbService.getAllReports();
-      setReports(fresh);
-    } catch (err: any) {
-      alert(`Error: ${err.message}`);
-    }
+    await dbService.saveReport(newReport);
+    const fresh = await dbService.getAllReports();
+    setReports(fresh);
   };
 
   const handleVote = async (reportId: string, type: 'support' | 'dispute') => {
@@ -337,21 +344,18 @@ const App: React.FC = () => {
       updated.disputeCount++;
     }
     
-    try {
-      setReports(prev => prev.map(r => r.id === reportId ? updated : r));
-      await dbService.updateReport(updated);
-    } catch (err) {}
+    setReports(prev => prev.map(r => r.id === reportId ? updated : r));
+    await dbService.updateReport(updated);
   };
 
   const renderContent = () => {
     if (isInitializing && !user) return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white">
         <Loader2 size={40} className="text-emerald-500 animate-spin" />
-        <p className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Waking up database...</p>
+        <p className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Verifying Session...</p>
       </div>
     );
 
-    // Common views for all users
     switch (currentView) {
       case 'about': return <About />;
       case 'features': return <Features onNavigate={handleNavigate} onSelectFeature={(id) => { setSelectedFeatureId(id); handleNavigate('feature_detail'); }} />;
@@ -363,45 +367,25 @@ const App: React.FC = () => {
       case 'notifications': return <NotificationsView notifications={[]} onMarkRead={() => {}} onClear={() => {}} />;
     }
 
-    // Auth-only views
-    if (user) {
-      if (currentView === 'dashboard') {
-        return (
-          <div className="container mx-auto px-4 py-8">
-            {user.role === 'citizen' ? (
-              <UserDashboard 
-                user={dynamicUser!} 
-                reports={reports.filter(r => r.reporterId === user.id)} 
-                onOpenReport={() => setIsReportModalOpen(true)}
-                onNavigate={handleNavigate}
-              />
-            ) : (
-              <GovDashboard 
-                user={dynamicUser!} 
-                allReports={reports} 
-                onUpdateProgress={(id, p) => onUpdateProgress(id, p)} 
-              />
-            )}
-          </div>
-        );
-      }
+    if (user && currentView === 'dashboard') {
+      return (
+        <div className="container mx-auto px-4 py-8">
+          {user.role === 'citizen' ? (
+            <UserDashboard user={dynamicUser!} reports={reports.filter(r => r.reporterId === user.id)} onOpenReport={() => setIsReportModalOpen(true)} onNavigate={handleNavigate} />
+          ) : (
+            <GovDashboard user={dynamicUser!} allReports={reports} onUpdateProgress={(id, p) => onUpdateProgress(id, p)} />
+          )}
+        </div>
+      );
     }
 
-    // Fallback to Home/Hero
     return (
-      <>
-        <Hero 
-          user={dynamicUser} 
-          onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} 
-          onOpenAuth={() => setIsAuthModalOpen(true)} 
-          onNavigate={handleNavigate} 
-        />
-        <About />
-        <Features onNavigate={handleNavigate} onSelectFeature={(id) => { setSelectedFeatureId(id); handleNavigate('feature_detail'); }} />
-        <Impact />
-        <HowItWorks />
-        <CTA onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} />
-      </>
+      <Hero 
+        user={dynamicUser} 
+        onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} 
+        onOpenAuth={() => setIsAuthModalOpen(true)} 
+        onNavigate={handleNavigate} 
+      />
     );
   };
 
@@ -409,94 +393,35 @@ const App: React.FC = () => {
     const r = reports.find(x => x.id === id);
     if (!r) return;
     const updated = { ...r, progress, status: (progress === 100 ? 'Resolved' : 'In Progress') as any };
-    try {
-      setReports(prev => prev.map(x => x.id === id ? updated : x));
-      await dbService.updateReport(updated);
-    } catch (err) {}
+    setReports(prev => prev.map(x => x.id === id ? updated : x));
+    await dbService.updateReport(updated);
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">
-      {dbError ? (
+      {dbError && (
         <div className="bg-red-600 text-white text-center py-2 px-4 text-[10px] font-black uppercase tracking-widest sticky top-0 z-[150] flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 shadow-xl">
-           <div className="flex items-center gap-2">
-             <ShieldAlert size={14} /> 
-             <span>{dbError}</span>
-           </div>
-           <button 
-             onClick={() => setShowRepairModal(true)} 
-             className="bg-white text-red-600 px-4 py-1.5 rounded-lg font-bold text-[9px] hover:bg-slate-100 transition-all shadow-inner"
-           >
-             Initialize Database Fix
-           </button>
+           <ShieldAlert size={14} /> <span>{dbError}</span>
+           <button onClick={() => setShowRepairModal(true)} className="bg-white text-red-600 px-4 py-1.5 rounded-lg font-bold text-[9px] hover:bg-slate-100 transition-all">Fix Database</button>
         </div>
-      ) : isDbReady ? (
-        <div className="bg-emerald-600 text-white text-center py-1 px-4 text-[9px] font-black uppercase tracking-[0.2em] sticky top-0 z-[150] flex items-center justify-center gap-2">
-           <Globe size={10} className="animate-pulse" /> Live Civic Hub Connected
-        </div>
-      ) : null}
-      
-      <Header 
-        user={dynamicUser} 
-        currentView={currentView}
-        onNavigate={handleNavigate}
-        onBack={handleBack}
-        onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} 
-        onOpenAuth={() => setIsAuthModalOpen(true)}
-        onLogout={handleLogout}
-      />
-      
-      <main className={`flex-grow ${isDbReady || dbError ? 'pt-24' : 'pt-16'}`}>
-        {renderContent()}
-      </main>
-
-      <Footer onNavigate={handleNavigate} />
-      
-      {showWelcome && user && (
-        <WelcomeOverlay user={user} onClose={() => setShowWelcome(false)} />
       )}
-
+      <Header user={dynamicUser} currentView={currentView} onNavigate={handleNavigate} onBack={handleBack} onOpenReport={() => user ? setIsReportModalOpen(true) : setIsAuthModalOpen(true)} onOpenAuth={() => setIsAuthModalOpen(true)} onLogout={handleLogout} />
+      <main className={`flex-grow ${isDbReady || dbError ? 'pt-24' : 'pt-16'}`}>{renderContent()}</main>
+      <Footer onNavigate={handleNavigate} />
+      {showWelcome && user && <WelcomeOverlay user={user} onClose={() => setShowWelcome(false)} />}
       {showRepairModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md" onClick={() => setShowRepairModal(false)} />
           <div className="relative bg-white w-full max-w-xl rounded-[2.5rem] p-10 flex flex-col gap-8 shadow-2xl animate-in zoom-in duration-300">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
-                 <Database size={24} />
-              </div>
-              <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">System Fix Console</h3>
-            </div>
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-3">
-               <p className="text-xs font-bold text-slate-600">Please run this in your Supabase SQL Editor to sync the schema:</p>
-               <ol className="text-[10px] text-slate-400 space-y-1 list-decimal list-inside">
-                 <li>Copy the code below</li>
-                 <li>Paste in Supabase SQL Editor</li>
-                 <li>Click Run and reload this page</li>
-               </ol>
-            </div>
-            <button 
-              onClick={handleCopySQL} 
-              className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-black transition-all"
-            >
-              {copied ? <Check size={18} /> : <Copy size={18} />} 
-              {copied ? 'Code Copied!' : 'Copy Fix Script'}
-            </button>
-            <button 
-              onClick={() => { setShowRepairModal(false); window.location.reload(); }} 
-              className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl"
-            >
-              I've Run the Code, Reload App
-            </button>
+            <Database size={24} className="text-red-600" />
+            <h3 className="text-2xl font-black text-slate-900 uppercase">System Fix Console</h3>
+            <button onClick={handleCopySQL} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest">{copied ? 'Code Copied!' : 'Copy Fix Script'}</button>
+            <button onClick={() => window.location.reload()} className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest">Reload App</button>
           </div>
         </div>
       )}
-
-      {isReportModalOpen && (
-        <ReportModal user={dynamicUser} onReportSubmit={addReport} onClose={() => setIsReportModalOpen(false)} />
-      )}
-      {isAuthModalOpen && (
-        <AuthModal onLogin={handleLogin} onClose={() => setIsAuthModalOpen(false)} />
-      )}
+      {isReportModalOpen && <ReportModal user={dynamicUser} onReportSubmit={addReport} onClose={() => setIsReportModalOpen(false)} />}
+      {isAuthModalOpen && <AuthModal onLogin={handleLogin} onClose={() => setIsAuthModalOpen(false)} />}
     </div>
   );
 };

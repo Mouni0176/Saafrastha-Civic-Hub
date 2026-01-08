@@ -5,31 +5,15 @@ import { supabase } from './supabase';
 export class CivicDB {
   async init(): Promise<boolean> {
     try {
-      // Precise check for profiles table and the specific 'email' column reported as missing
-      // Using .select('*') is safer during check but specifically accessing 'email' triggers the error we need to catch
       const { error } = await supabase.from('profiles').select('id, email').limit(1);
-      
       if (error) {
-        // PostgREST error codes: 42P01 = table missing, 42703 = column missing
         if (error.code === '42P01' || error.code === '42703' || error.message.includes('email')) {
-          console.warn(`CivicDB Init Error: ${error.message} (${error.code})`);
           return false;
         }
-        // If it's just a general connection issue, we log it but don't show the repair modal
-        console.warn("CivicDB Sync Alert:", error.message);
         return true; 
       }
-      
-      // Secondary health check for the reports table
-      const { error: reportsError } = await supabase.from('reports').select('id').limit(1);
-      if (reportsError && (reportsError.code === '42P01' || reportsError.code === '42703')) {
-        console.warn(`CivicDB Reports Table Error: ${reportsError.message}`);
-        return false;
-      }
-
       return true;
     } catch (e) {
-      console.error("CivicDB Critical Sync Failure:", e);
       return false;
     }
   }
@@ -54,9 +38,7 @@ export class CivicDB {
           upsert: true
         });
 
-      if (error) {
-        return base64Data;
-      }
+      if (error) return base64Data;
 
       const { data: publicUrlData } = supabase.storage
         .from('report-images')
@@ -68,59 +50,39 @@ export class CivicDB {
     }
   }
 
-  async saveUser(user: any): Promise<void> {
+  // Create or update a profile in the database
+  async syncProfile(id: string, email: string, name?: string, role?: string): Promise<void> {
     const { error } = await supabase
       .from('profiles')
       .upsert({
-        id: user.id,
-        email: user.email.toLowerCase(),
-        full_name: user.name,
-        role: user.role,
-        department: user.department,
-        points: user.points || 0,
-        password: user.password
-      }, { onConflict: 'email' });
+        id: id,
+        email: email.toLowerCase(),
+        full_name: name,
+        role: role || 'citizen',
+        points: 0
+      }, { onConflict: 'id' });
 
-    if (error) throw new Error(`Registration Error: ${error.message}`);
+    if (error) throw new Error(`Profile Sync Error: ${error.message}`);
   }
 
-  async getUserByEmail(email: string): Promise<any> {
+  async getUserProfile(id: string): Promise<User | null> {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('email', email.toLowerCase())
+      .eq('id', id)
       .single();
 
-    if (error) {
-      if (error.code === 'PGRST116') return null; // No user found
-      throw new Error(`Auth Error: ${error.message}. Is your database set up correctly?`);
-    }
+    if (error || !data) return null;
     
-    if (data) {
-      return {
-        id: data.id,
-        name: data.full_name,
-        email: data.email,
-        role: data.role,
-        points: data.points,
-        department: data.department,
-        password: data.password
-      };
-    }
-    return null;
-  }
-
-  async setSession(user: any | null): Promise<void> {
-    if (user) {
-      localStorage.setItem('saaf_rasta_session', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('saaf_rasta_session');
-    }
-  }
-
-  async getSession(): Promise<any | null> {
-    const session = localStorage.getItem('saaf_rasta_session');
-    return session ? JSON.parse(session) : null;
+    return {
+      id: data.id,
+      name: data.full_name || data.email.split('@')[0],
+      email: data.email,
+      role: data.role,
+      points: data.points || 0,
+      reportsCount: 0,
+      department: data.department
+    };
   }
 
   async getAllReports(): Promise<Report[]> {
@@ -129,10 +91,7 @@ export class CivicDB {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      if (error.code === '42P01') return []; // Table missing, return empty
-      throw new Error(`Feed Error: ${error.message}`);
-    }
+    if (error) return [];
     
     return (data || []).map(r => ({
       id: r.id,
