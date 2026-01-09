@@ -118,8 +118,8 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('home');
   const [history, setHistory] = useState<AppView[]>([]);
   const [isDbReady, setIsDbReady] = useState(false);
-  const [dbError, setDbError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isViewChanging, setIsViewChanging] = useState(false);
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
   
   const [notifications, setNotifications] = useState<Notification[]>([
@@ -133,10 +133,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Optimized: Reduced blocking time for DB check
         const isHealthy = await Promise.race([
           dbService.init(),
-          new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 1500))
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 2000))
         ]);
 
         setIsDbReady(isHealthy);
@@ -151,7 +150,6 @@ const App: React.FC = () => {
           }
         }
         
-        // Parallel fetching non-blocking
         dbService.getAllReports().then(reps => {
           if (reps) setReports(reps);
         });
@@ -185,28 +183,35 @@ const App: React.FC = () => {
   }, []);
 
   const handleNavigate = useCallback((view: AppView) => {
-    setCurrentView(prev => {
-      if (view === prev) return prev;
-      setHistory(h => [...h, prev]);
+    if (view === currentView) return;
+    setIsViewChanging(true);
+    setTimeout(() => {
+      setHistory(h => [...h, currentView]);
+      setCurrentView(view);
       window.location.hash = view;
-      window.scrollTo({ top: 0, behavior: 'auto' }); // 'auto' is faster than 'smooth'
-      return view;
-    });
-  }, []);
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      setIsViewChanging(false);
+    }, 300);
+  }, [currentView]);
 
   const handleBack = useCallback(() => {
-    setHistory(prev => {
-      if (prev.length === 0) {
-        handleNavigate(user ? 'dashboard' : 'home');
-        return prev;
-      }
-      const newHistory = [...prev];
-      const prevView = newHistory.pop()!;
-      setCurrentView(prevView);
-      window.location.hash = prevView;
-      return newHistory;
-    });
-  }, [user, handleNavigate]);
+    setIsViewChanging(true);
+    setTimeout(() => {
+      setHistory(prev => {
+        if (prev.length === 0) {
+          setCurrentView(user ? 'dashboard' : 'home');
+          setIsViewChanging(false);
+          return prev;
+        }
+        const newHistory = [...prev];
+        const prevView = newHistory.pop()!;
+        setCurrentView(prevView);
+        window.location.hash = prevView;
+        setIsViewChanging(false);
+        return newHistory;
+      });
+    }, 300);
+  }, [user]);
 
   const handleLogin = (userData: User) => {
     setUser(userData);
@@ -240,8 +245,11 @@ const App: React.FC = () => {
 
   const addReport = async (reportData: Partial<Report>) => {
     if (!user) return;
+    
+    // Optimistic Update
+    const tempId = `SR-TEMP-${Math.floor(Math.random() * 1000)}`;
     const newReport: Report = {
-      id: `SR-${Math.floor(Math.random() * 9000) + 1000}`,
+      id: tempId,
       reporterId: user.id,
       reporterName: user.name,
       title: reportData.title || 'Untitled Issue',
@@ -260,9 +268,19 @@ const App: React.FC = () => {
       lat: reportData.lat,
       lng: reportData.lng
     };
-    await dbService.saveReport(newReport);
-    const fresh = await dbService.getAllReports();
-    setReports(fresh);
+
+    setReports(prev => [newReport, ...prev]);
+
+    try {
+      await dbService.saveReport({ ...newReport, id: `SR-${Math.floor(Math.random() * 9000) + 1000}` });
+      const fresh = await dbService.getAllReports();
+      setReports(fresh);
+    } catch (err) {
+      console.error("Save failed:", err);
+      // Rollback optimistic update
+      setReports(prev => prev.filter(r => r.id !== tempId));
+      throw err;
+    }
   };
 
   const handleVote = async (reportId: string, type: 'support' | 'dispute') => {
@@ -287,7 +305,7 @@ const App: React.FC = () => {
   if (isInitializing) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6">
       <RefreshCw size={40} className="text-emerald-500 animate-spin mb-6" />
-      <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest text-center opacity-40">Initializing Gateway...</p>
+      <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest text-center opacity-40">Synchronizing Civic Network...</p>
     </div>
   );
 
@@ -306,7 +324,7 @@ const App: React.FC = () => {
         />
       )}
 
-      <main className={`flex-grow transition-opacity duration-300 ${isAuthModalOpen ? 'pt-0' : 'pt-24'}`}>
+      <main className={`flex-grow transition-all duration-300 ${isAuthModalOpen ? 'pt-0' : 'pt-24'} ${isViewChanging ? 'opacity-0 translate-y-2' : 'opacity-100 translate-y-0'}`}>
         <Suspense fallback={<ViewLoading />}>
           <div className="view-transition">
             {(() => {

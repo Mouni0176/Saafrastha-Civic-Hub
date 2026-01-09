@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, Activity } from 'lucide-react';
+import { ArrowRight, Activity, Zap, ShieldCheck, Globe, CheckCircle2 } from 'lucide-react';
 import { User, AppView } from '../App';
 
 interface HeroProps {
@@ -9,15 +9,59 @@ interface HeroProps {
   onNavigate: (view: AppView) => void;
 }
 
+const tickerItems = [
+  { label: "Sector 4 Active", val: "Online", icon: <Activity size={12} /> },
+  { label: "SLA Success Rate", val: "94.2%", icon: <Zap size={12} /> },
+  { label: "Node Registry", val: "Verified", icon: <ShieldCheck size={12} /> },
+  { label: "Geodata Clusters", val: "1,240+", icon: <Globe size={12} /> },
+  { label: "Sanitation Reports", val: "Resolved", icon: <CheckCircle2 size={12} /> },
+  { label: "Hazard Response", val: "Optimized", icon: <Activity size={12} /> },
+  { label: "Citizen Trust", val: "Peak", icon: <Zap size={12} /> },
+];
+
 const Hero: React.FC<HeroProps> = ({ user, onOpenReport, onOpenAuth, onNavigate }) => {
   return (
-    <section className="relative pt-32 pb-40 overflow-hidden bg-slate-50 mesh-bg">
+    <section className="relative pt-0 pb-0 overflow-hidden bg-slate-50 mesh-bg flex flex-col">
+      {/* Infinite Horizontal Scroll Ticker - NOW ABOVE HERO */}
+      <div className="w-full bg-slate-900 py-5 relative overflow-hidden flex-shrink-0 border-b border-white/5 z-20">
+        <div className="flex whitespace-nowrap animate-infinite-scroll">
+          {/* Quadruple the items to ensure a seamless long-range loop on all screens */}
+          {[...tickerItems, ...tickerItems, ...tickerItems, ...tickerItems].map((item, idx) => (
+            <div 
+              key={idx} 
+              className="inline-flex items-center gap-4 px-12 border-r border-white/5 group transition-colors hover:bg-white/5"
+            >
+              <div className="w-6 h-6 bg-white/10 rounded-lg flex items-center justify-center text-emerald-400 group-hover:text-white transition-colors">
+                {item.icon}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest leading-none">
+                  {item.label}
+                </span>
+                <span className="text-[11px] font-black text-white uppercase mt-1 tracking-tight">
+                  {item.val}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Subtle decorative "Live" badge overlay */}
+        <div className="absolute top-0 left-0 h-full w-40 bg-gradient-to-r from-slate-900 to-transparent z-10 pointer-events-none"></div>
+        <div className="absolute top-0 right-0 h-full w-40 bg-gradient-to-l from-slate-900 to-transparent z-10 pointer-events-none"></div>
+        
+        <div className="absolute top-1/2 left-8 -translate-y-1/2 z-20 hidden sm:flex items-center gap-3 bg-emerald-500/20 px-4 py-2 rounded-xl backdrop-blur-md border border-emerald-500/20">
+           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+           <span className="text-[10px] font-black text-white uppercase tracking-widest">Network Pulse</span>
+        </div>
+      </div>
+
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/5 blur-[120px] rounded-full"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/5 blur-[120px] rounded-full"></div>
       </div>
 
-      <div className="container mx-auto px-6 relative z-10">
+      <div className="container mx-auto px-6 relative z-10 flex-grow pt-24 pb-32">
         <div className="flex flex-col lg:flex-row items-center gap-20">
           <div className="flex-1 space-y-12">
             <div className="space-y-8">
